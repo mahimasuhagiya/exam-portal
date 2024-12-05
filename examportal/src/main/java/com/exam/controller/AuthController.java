@@ -54,7 +54,6 @@ public class AuthController {
         UserDetails userDetails = userService.loadUserByUsername(request.getUsername());
         Optional<User> user = userService.getUserByEmail(request.getUsername());
         Role role = user.get().getRole();
-        System.out.println(role);
         Long userId = user.get().getId();  
         String jwt = jwtUtils.generateToken(userDetails);
         return ResponseEntity.ok(Map.of("Token",jwt, "role", role, "userId", userId));

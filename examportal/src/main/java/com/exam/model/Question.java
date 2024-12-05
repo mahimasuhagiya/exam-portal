@@ -25,6 +25,7 @@ public class Question {
     private Long id;
     @Lob
     private String question;
+    private String image;
     @Lob
     private String optionA;
     private boolean isAImage;
