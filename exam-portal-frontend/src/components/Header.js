@@ -1,26 +1,46 @@
-import React from 'react';
-import { Navbar, NavbarBrand } from 'reactstrap';
+import React, { useState } from "react";
+import { NavLink } from "react-router-dom";
+import { FaBars, FaTimes } from "react-icons/fa";
+import { Col, Container, Navbar, NavbarBrand, Row } from 'reactstrap';
 import logo from '../logo.png'; 
 import '../css/header.css';
+import { useNavigate } from 'react-router-dom';
+import Sidebar from './Sidebar';
+import "../css/sidebar.css";
 
 const Header = () => {
+  const navigate = useNavigate();
+  const isLoggedIn = (localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null)? true:false;
+  const [isOpen, setIsOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsOpen(!isOpen);
+  };
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    //navigate('/');
+       // window.location.reload();
+       window.location.href = '/';
+};
   return (
-    // <header className="mesmerizing-header">
-    //   <div className="header-content">
-    //     <h1 className="header-title">Welcome to My App</h1>
-    //     <p className="header-subtitle">A place to explore and grow</p>
-    //   </div>
-    //   <div className="animated-gradient"></div>
-    // </header>
     <header className="exam-portal-header">
-    <div className="header-logo">
-      <img src={logo} alt="Exam Portal Logo" />
-    </div>
-    <nav className="header-nav">
-      <ul>
-        <li><a href="/logout">Logout</a></li>
-      </ul>
-    </nav>
+      <Container fluid>
+      <Row>
+        <Col lg={3}>{isLoggedIn ? <Sidebar/>:<></>}</Col>
+        <Col   lg={6} className="d-flex justify-content-center"> 
+          <div className="header-logo"><img src={logo} alt="Exam Portal Logo" /></div>
+        </Col>
+        <Col lg={3} className="d-flex justify-content-end">
+          {isLoggedIn ?
+          <nav className="header-nav">
+            <ul>
+              <li><NavLink onClick={handleLogout}>Logout</NavLink></li>
+            </ul>
+          </nav>: <></>}
+        </Col>
+      </Row>
+    </Container>
   </header>
   );
 };

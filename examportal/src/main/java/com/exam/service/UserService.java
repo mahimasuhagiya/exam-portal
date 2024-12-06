@@ -82,17 +82,16 @@ public class UserService implements UserDetailsService {
     }
 
 
-    public User updateUser(Long id, User user) {
+    public User updateUser( User user) {
         // If updating email, validate its uniqueness
-        if (isEmailExist(user.getEmail()) && !isSameEmail(id, user.getEmail())) {
+        if (isEmailExist(user.getEmail()) && !isSameEmail(user.getId(), user.getEmail())) {
             throw new RuntimeException("Email already exists.");
         }
         
-        if (userRepository.existsById(id)) {
-            user.setId(id);
+        if (userRepository.existsById(user.getId())) {
             return userRepository.save(user);
         }
-        throw new RuntimeException("User not found with id " + id);
+        throw new RuntimeException("User not found with id " + user.getId());
     }
 
 

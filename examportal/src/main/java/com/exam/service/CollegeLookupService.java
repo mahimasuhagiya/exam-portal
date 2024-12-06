@@ -32,12 +32,11 @@ public class CollegeLookupService{
 	}
 
 
-	public CollegeLookup updateCollege(Long id, CollegeLookup college) {
-		if (collegeLookupRepository.existsById(id)) {
-			college.setId(id);
+	public CollegeLookup updateCollege(CollegeLookup college) {
+		if (collegeLookupRepository.existsById(college.getId())) {
 			return collegeLookupRepository.save(college);
 		}
-		throw new RuntimeException("College not found with id " + id);
+		throw new RuntimeException("College not found with id " + college.getId());
 	}
 
 

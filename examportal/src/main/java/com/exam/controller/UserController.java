@@ -43,10 +43,10 @@ public class UserController {
 		return user.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
 	}
 	
-	@PutMapping("/{id}")
-	public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User user) {
+	@PutMapping
+	public ResponseEntity<User> updateUser( @RequestBody User user) {
 		try {
-			User updatedUser = userService.updateUser(id, user);
+			User updatedUser = userService.updateUser( user);
 			return ResponseEntity.ok(updatedUser);
 		} catch (RuntimeException e) {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);

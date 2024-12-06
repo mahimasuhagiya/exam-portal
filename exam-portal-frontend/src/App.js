@@ -8,9 +8,11 @@ import { Col, Container, Row } from 'reactstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Register from './components/Register';
 import ViewUsers from './components/ViewUsers';
+import CollegePage from './components/CollegePage';
 
 function App() {
-  const isLoggedIn = localStorage.getItem("userId") !== null;
+ // localStorage.setItem("userId",1);
+  const isLoggedIn = (localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null)? true:false;
 
   return (
     <Router>
@@ -19,20 +21,19 @@ function App() {
       <Container fluid>
         {isLoggedIn ? (
           <Row>
-            
-              <Sidebar />
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/colleges" element={<CollegePage />} />
                 <Route path="/viewusers" element={<ViewUsers />} />
               </Routes>
           </Row>
         ) : (
           <div>
-            <Home/>
           <Routes>
             <Route path="/" element={<Home />} />
+             <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
           </div>
         )}

@@ -41,9 +41,9 @@ export function LoginForm(props) {
             localStorage.setItem('userId', userId);
             console.log(token);
             if(role=="ADMIN" || role=="EXAMINER")
-              navigate('/dashboard');
+               window.location.href = '/dashboard';
             else
-              navigate("/userDashboard")
+            window.location.href ="/userDashboard";
         } catch (err) {
             setError('Login failed. Please check your credentials.',err);
         }
