@@ -38,7 +38,7 @@ public class Question {
     @Lob
     private String optionD;
     private boolean isDImage;
-    private String correctAnswer;
+    private int correctAnswer;
     @ManyToOne
     @JoinColumn(name = "difficulty_level_id")
     private DifficultyLookup difficulty;

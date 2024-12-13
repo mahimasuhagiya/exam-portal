@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import AccountBox from "./accountBox/index"
-import "./styles.css";
+import "../css/styles.css";
 import styled from "styled-components";
 
 const AppContainer = styled.div`

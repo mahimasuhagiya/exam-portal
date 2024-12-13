@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 import { NavLink } from "react-router-dom";
-import { FaBars, FaTimes } from "react-icons/fa";
-import { Col, Container, Navbar, NavbarBrand, Row } from 'reactstrap';
+import { Col, Container, Row } from 'reactstrap';
 import logo from '../logo.png'; 
 import '../css/header.css';
 import { useNavigate } from 'react-router-dom';
@@ -11,11 +10,8 @@ import "../css/sidebar.css";
 const Header = () => {
   const navigate = useNavigate();
   const isLoggedIn = (localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null)? true:false;
-  const [isOpen, setIsOpen] = useState(false);
 
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen);
-  };
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("userId");

@@ -6,9 +6,12 @@ import Home from './components/Home';
 import Dashboard from './components/Dashboard';
 import { Col, Container, Row } from 'reactstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import Register from './components/Register';
 import ViewUsers from './components/ViewUsers';
 import CollegePage from './components/CollegePage';
+import QuestionCategories from './components/QuestionCategories';
+import Difficulty from './components/Difficulty';
+import Student from './components/Student';
+import Questions from './components/Questions';
 
 function App() {
  // localStorage.setItem("userId",1);
@@ -24,9 +27,11 @@ function App() {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/register" element={<Register />} />
                 <Route path="/colleges" element={<CollegePage />} />
-                <Route path="/viewusers" element={<ViewUsers />} />
+                <Route path="/difficulty" element={<Difficulty />} />
+                <Route path="/viewusers" element={<Student />} />
+                <Route path="/questions" element={<Questions />} />
+                <Route path="/question-categories" element={<QuestionCategories />} />
               </Routes>
           </Row>
         ) : (

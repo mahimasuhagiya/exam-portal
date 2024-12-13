@@ -5,5 +5,5 @@ import jakarta.persistence.Entity;
 public enum Role {
     ADMIN,
     EXAMINER,
-    USER
+    STUDENT
 }

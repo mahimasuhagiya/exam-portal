@@ -6,6 +6,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "../css/styles.css";
 import API_URL from "./../services/authService";
+import showToastConfirmation from "./toast";
 
 const CollegePage = () => {
   const [collegeData, setCollegeData] = useState([]);
@@ -19,6 +20,7 @@ const CollegePage = () => {
   // Fetch college data
   useEffect(() => {
     const fetchColleges = async () => {
+      if (!token) return;
       try {
         const response = await axios.get(`${API_URL}/colleges`, {
           headers: {
@@ -35,46 +37,19 @@ const CollegePage = () => {
     fetchColleges();
   }, [token]);
 
-  // Toggle modal
-  const toggleModal = () => {
-    if (!isModalOpen) {
-      setNewCollege({ name: "", address: "" });
-     // setIsEditing(false);
-    }
+  // Toggle modal and reset form if it's not open
+  const toggleModal = (flag) => {
     setIsModalOpen(!isModalOpen);
+      if(flag){
+        setNewCollege({ name: "", address: "" });  // Reset when opening
+        setIsEditing(false); // Reset editing mode when opening the modal        
+      }
   };
 
   // Handle input change
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewCollege({ ...newCollege, [name]: value });
-  };
-
-  // Centralized confirmation toast
-  const showToastConfirmation = (action, callback) => {
-    toast(
-      <div style={{ textAlign: "center" }}>
-        <p>Are you sure you want to {action} this college?</p>
-        <div>
-          <button
-            className="btn btn-danger btn-sm mr-2"
-            onClick={() => {
-              callback();
-              toast.dismiss();
-            }}
-          >
-            Yes
-          </button>
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={() => toast.dismiss()}
-          >
-            No
-          </button>
-        </div>
-      </div>,
-      { position: "top-center", autoClose: false }
-    );
+    setNewCollege((prev) => ({ ...prev, [name]: value }));
   };
 
   // Save College (Add/Edit)
@@ -120,7 +95,7 @@ const CollegePage = () => {
       }
     };
 
-    showToastConfirmation(isEditing ? "update" : "add", saveCallback);
+    showToastConfirmation(isEditing ? "update" : "add","College", saveCallback);
   };
 
   // Delete College
@@ -140,15 +115,15 @@ const CollegePage = () => {
       }
     };
 
-    showToastConfirmation("delete", deleteCallback);
+    showToastConfirmation("delete", "College", deleteCallback);
   };
 
   // Open Edit Form
   const openEditForm = (college) => {
     setSelectedCollege(college);
-    setIsEditing(true);
-    toggleModal();
-    setNewCollege({ name: college.name, address: college.address });
+    setIsEditing(true); // Set editing mode
+    setNewCollege({ id: college.id, name: college.name, address: college.address }); // Fill in the current college's data
+    toggleModal(); // Open the modal
   };
 
   // Filter data based on search
@@ -156,17 +131,17 @@ const CollegePage = () => {
     (college) =>
       college.name.toLowerCase().includes(searchText.toLowerCase()) ||
       college.address.toLowerCase().includes(searchText.toLowerCase())
-  );
+  ).sort((a, b) => b.id - a.id);
 
   // Columns for DataGrid
   const columns = [
-    { field: "id", headerName: "ID", width: 70 },
-    { field: "name", headerName: "Name", width: 200 },
-    { field: "address", headerName: "Address", width: 300 },
+    { field: "id", headerName: "ID", width: 100 },
+    { field: "name", headerName: "Name", flex: 1 },
+    { field: "address", headerName: "Address", flex: 1 },
     {
       field: "actions",
       headerName: "Actions",
-      width: 200,
+      flex: 1,
       renderCell: (params) => (
         <div>
           <button
@@ -187,7 +162,7 @@ const CollegePage = () => {
   ];
 
   return (
-    <div className="app-container">
+    <div>
       <ToastContainer />
       <h1 className="text-center mb-4">College Management</h1>
 
@@ -200,7 +175,7 @@ const CollegePage = () => {
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
         />
-        <button className="btn btn-primary ml-4" onClick={toggleModal}>
+        <button className="btn btn-primary ml-4"   onClick={() => toggleModal(true)}>
           Add College
         </button>
       </div>

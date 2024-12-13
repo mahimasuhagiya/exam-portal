@@ -45,21 +45,28 @@ const Sidebar = () => {
               Manage Colleges
             </NavLink>
             <NavLink
-              to="/manage-questions"
+              to="/questions"
               className={({ isActive }) => (isActive ? "active" : "")}
               onClick={toggleSidebar}
             >
               Manage Questions
             </NavLink>
             <NavLink
-              to="/manage-question-categories"
+              to="/question-categories"
               className={({ isActive }) => (isActive ? "active" : "")}
               onClick={toggleSidebar}
             >
               Manage Question Categories
             </NavLink>
             <NavLink
-              to="/manage-exams"
+              to="/difficulty"
+              className={({ isActive }) => (isActive ? "active" : "")}
+              onClick={toggleSidebar}
+            >
+              Manage Difficulty Levels
+            </NavLink>
+            <NavLink
+              to="/exams"
               className={({ isActive }) => (isActive ? "active" : "")}
               onClick={toggleSidebar}
             >
