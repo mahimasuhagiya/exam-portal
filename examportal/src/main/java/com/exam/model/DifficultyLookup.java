@@ -2,6 +2,8 @@ package com.exam.model;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -23,9 +25,11 @@ public class DifficultyLookup {
 	private String name;
 
 	@OneToMany(mappedBy = "difficulty", cascade = CascadeType.ALL)
+    @JsonIgnore
 	private List<Question> questions;
 	
 	@OneToMany(mappedBy = "difficulty", cascade = CascadeType.ALL)
+    @JsonIgnore
 	private List<Exam> exams;
 
 }

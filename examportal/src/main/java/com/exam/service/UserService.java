@@ -32,7 +32,6 @@ public class UserService implements UserDetailsService {
         if(user.getRole().equals(null)) {
         	 user.setRole(Role.STUDENT);
         }
-        System.out.println(user.getCollege());
         user.setActive(true);
         return userRepository.save(user);
     }
