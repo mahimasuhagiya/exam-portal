@@ -14,6 +14,8 @@ const Question = () => {
     const [difficultyOptions, setDifficultyOptions] = useState([]);
     const [categoryOptions, setCategoryOptions] = useState([]);
     const [selectedQuestion, setSelectedQuestion] = useState(null);
+    const [searchText, setSearchText] = useState("");
+    const getRowHeight = () => "auto";
     const [newQuestion, setNewQuestion] = useState({
         question: "",
         isAImage: false,
@@ -134,11 +136,16 @@ const Question = () => {
     const saveQuestion = async () => {
         const formData = new FormData();
         formData.append("question", JSON.stringify({
+            id: newQuestion.id || null,
             question: newQuestion.question,
             optionA: newQuestion.optionA,
             optionB: newQuestion.optionB,
             optionC: newQuestion.optionC,
             optionD: newQuestion.optionD,
+            aimage: newQuestion.isAImage,
+            bimage: newQuestion.isBImage,
+            cimage: newQuestion.isCImage,
+            dimage: newQuestion.isDImage,
             correctAnswer: newQuestion.correctAnswer,
             category: { "id": newQuestion.category.id, "name": newQuestion.category.name },
             difficulty: { "id": newQuestion.difficulty.id, "name": newQuestion.difficulty.name }
@@ -175,7 +182,7 @@ const Question = () => {
                     toast.success("Question added successfully!");
                 }
 
-                toggleModal();
+                toggleModal(true);
             } catch (error) {
                 toast.error("Error saving question. Please try again.");
             }
@@ -228,17 +235,85 @@ const Question = () => {
             difficulty: question.difficulty,
             category: question.category,
         });
-        toggleModal();
+        toggleModal(false);
     };
+    // Filter data based on search
+    const filteredData = questionData.filter((question) =>
+        question.question?.toLowerCase().includes(searchText.toLowerCase()) ||
+        question.difficulty?.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+        question.category?.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+        question.optionA?.toLowerCase().includes(searchText.toLowerCase()) ||
+        question.optionB?.toLowerCase().includes(searchText.toLowerCase()) ||
+        question.optionC?.toLowerCase().includes(searchText.toLowerCase()) ||
+        question.optionD?.toLowerCase().includes(searchText.toLowerCase())
+    ).sort((a, b) => b.id - a.id);
 
     // Columns for DataGrid
     const columns = [
-        { field: "id", headerName: "ID", width: 100 },
-        { field: "question", headerName: "Question", flex: 1 },
+        { field: "id", headerName: "ID", width: 50,renderCell: (params) => (<div style={{ whiteSpace: "normal",wordWrap: "break-word",overflow: "hidden",textOverflow: "ellipsis",}}>{params.value}</div>), },
+        { field: "question", headerName: "Question", flex: 2,renderCell: (params) => (<div style={{ whiteSpace: "normal",wordWrap: "break-word",overflow: "hidden",textOverflow: "ellipsis",}}>{params.value}</div>), },
+        {
+            field: "image",
+            headerName: "Question Image",
+            flex: 1,
+            renderCell: (params) => (<div style={{ whiteSpace: "normal",wordWrap: "break-word",overflow: "hidden",textOverflow: "ellipsis",}}>
+              {  params.value ? <img src={`${API_URL}/${params.value}`} alt="Question" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : "N/A"}
+                </div>
+            )
+        },
+        {
+            field: "optionA",
+            headerName: "Option A",
+            flex: 1,
+            renderCell: (params) => (<div style={{ whiteSpace: "normal",wordWrap: "break-word",overflow: "hidden",textOverflow: "ellipsis",}}>
+                {params.row.aimage ? <img src={`${API_URL}/${params.value}`} alt="Option A" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"}
+                </div>
+            )
+        },
+        {
+            field: "optionB",
+            headerName: "Option B",
+            flex: 1,
+            renderCell: (params) => (<div style={{ whiteSpace: "normal",wordWrap: "break-word",overflow: "hidden",textOverflow: "ellipsis",}}>
+                {params.row.bimage ? <img src={`${API_URL}/${params.value}`} alt="Option B" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"}
+                </div>
+            )
+        },
+        {
+            field: "optionC",
+            headerName: "Option C",
+            flex: 1,
+            renderCell: (params) => (<div style={{ whiteSpace: "normal",wordWrap: "break-word",overflow: "hidden",textOverflow: "ellipsis",}}>
+                {params.row.cimage ? <img src={`${API_URL}/${params.value}`} alt="Option C" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"}
+                </div>
+            )
+        },
+        {
+            field: "optionD",
+            headerName: "Option D",
+            flex: 1,
+            renderCell: (params) => (<div style={{ whiteSpace: "normal",wordWrap: "break-word",overflow: "hidden",textOverflow: "ellipsis",}}>
+                {params.row.dimage ? <img src={`${API_URL}/${params.value}`} alt="Option D" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"}
+          </div>
+            )
+        },
+        { field: "correctAnswer", headerName: "Correct Answer", flex: 1 },
+        {
+            field: "difficulty",
+            headerName: "Difficulty",
+            flex: 1,
+            renderCell: (params) => params.value?.name || "N/A"
+        },
+        {
+            field: "category",
+            headerName: "Category",
+            flex: 1,
+            renderCell: (params) => params.value?.name || "N/A"
+        },
         {
             field: "actions",
             headerName: "Actions",
-            flex: 1,
+            width:120,
             renderCell: (params) => (
                 <div>
                     <button
@@ -263,23 +338,34 @@ const Question = () => {
             <ToastContainer />
             <h1 className="text-center mb-4">Question Management</h1>
 
-            {/* Add Question Button */}
-            <button className="btn btn-primary mb-4" onClick={() => toggleModal(true)}>
-                Add Question
-            </button>
-
+            {/* Search Input */}
+            <div className="d-flex justify-content-between mb-4">
+                <input
+                    type="text"
+                    placeholder="Search Questions"
+                    className="form-control"
+                    value={searchText}
+                    style={{    height: "63px"}}
+                    onChange={(e) => setSearchText(e.target.value)}
+                />
+                <button className="btn btn-primary mb-4" onClick={() => toggleModal(true)}>
+                    Add Question
+                </button>
+            </div>
             {/* DataGrid */}
             <div style={{ width: "100%" }}>
                 <DataGrid
                     rows={questionData}
                     columns={columns}
                     pageSize={10}
+                    getRowHeight={getRowHeight} // Dynamic row height for wrapping
+    
                     rowsPerPageOptions={[5, 10, 15]}
                 />
             </div>
 
             {/* Modal */}
-            <Modal isOpen={isModalOpen} className="modal-lg" toggle={toggleModal}>
+            <Modal isOpen={isModalOpen} className="modal-lg" toggle={() => toggleModal(true)}>
                 <div className="modal-content">
                     <div className="modal-header">
                         {isEditing ? "Edit Question" : "Add Question"}
@@ -374,13 +460,13 @@ const Question = () => {
                                                 onChange={(e) => handleFileChange(e)}
                                             />
                                             <img
-                                               src={
-                                                newQuestion[`option${option}Image`] instanceof File
-                                                    ? URL.createObjectURL(newQuestion[`option${option}Image`])
-                                                    : newQuestion[`option${option}`]
-                                                    ? `${API_URL}/${newQuestion[`option${option}`]}`
-                                                    : null
-                                            }
+                                                src={
+                                                    newQuestion[`option${option}Image`] instanceof File
+                                                        ? URL.createObjectURL(newQuestion[`option${option}Image`])
+                                                        : newQuestion[`option${option}`]
+                                                            ? `${API_URL}/${newQuestion[`option${option}`]}`
+                                                            : null
+                                                }
                                                 alt="Question Preview"
                                                 className="mt-2 img-thumbnail"
                                                 width="150"
@@ -446,7 +532,7 @@ const Question = () => {
                         </form>
                     </div>
                     <div className="modal-footer">
-                        <button className="btn btn-secondary" onClick={toggleModal}>
+                        <button className="btn btn-secondary" onClick={() => toggleModal(true)}>
                             Cancel
                         </button>
                         <button className="btn btn-primary" onClick={saveQuestion}>

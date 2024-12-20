@@ -27,7 +27,7 @@ public class Exam {
 	@JoinColumn(name = "difficulty_level_id")
 	private DifficultyLookup difficulty;
 	private int durationMinutes;
-	private int maxMarks;
+	private int numberOfQuestions;
 	private boolean isActive;
 	
 	@OneToMany(mappedBy = "exam", cascade = CascadeType.ALL)

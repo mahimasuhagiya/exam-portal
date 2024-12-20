@@ -12,6 +12,7 @@ import QuestionCategories from './components/QuestionCategories';
 import Difficulty from './components/Difficulty';
 import Student from './components/Student';
 import Questions from './components/Questions';
+import Exams from './components/Exams';
 
 function App() {
  // localStorage.setItem("userId",1);
@@ -30,6 +31,7 @@ function App() {
                 <Route path="/colleges" element={<CollegePage />} />
                 <Route path="/difficulty" element={<Difficulty />} />
                 <Route path="/viewusers" element={<Student />} />
+                <Route path="/manageexams" element={<Exams />} />
                 <Route path="/questions" element={<Questions />} />
                 <Route path="/question-categories" element={<QuestionCategories />} />
               </Routes>
@@ -38,7 +40,7 @@ function App() {
           <div>
           <Routes>
             <Route path="/" element={<Home />} />
-             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
           </div>
         )}

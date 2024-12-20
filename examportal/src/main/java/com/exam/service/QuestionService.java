@@ -74,7 +74,7 @@ public class QuestionService {
             	savedQuestion.setDImage(true);
             }
 
-            return questionRepository.save(question);
+            return questionRepository.save(savedQuestion);
 
         } catch (IOException e) {
             throw new Exception("File saving error: " + e.getMessage(), e);
@@ -105,26 +105,44 @@ public class QuestionService {
         questionRepository.deleteById(id);
     }
 
-//    public Question updateQuestion(Long id, Question questionDetails) {
-//        Optional<Question> optionalQuestion = questionRepository.findById(id);
-//        if (optionalQuestion.isPresent()) {
-//            Question question = optionalQuestion.get();
-//            question.setQuestion(questionDetails.getQuestion());
-//            question.setImage(questionDetails.getImage());
-//            question.setOptionA(questionDetails.getOptionA());
-//            question.setAImage(questionDetails.isAImage());
-//            question.setOptionB(questionDetails.getOptionB());
-//            question.setBImage(questionDetails.isBImage());
-//            question.setOptionC(questionDetails.getOptionC());
-//            question.setCImage(questionDetails.isCImage());
-//            question.setOptionD(questionDetails.getOptionD());
-//            question.setDImage(questionDetails.isDImage());
-//            question.setCorrectAnswer(questionDetails.getCorrectAnswer());
-//            question.setDifficulty(questionDetails.getDifficulty());
-//            question.setCategory(questionDetails.getCategory());
-//
-//            return questionRepository.save(question);
-//        }
-//        return null;
-//    }
+    public Question updateQuestion(Question question,
+            MultipartFile questionImage,
+            MultipartFile optionAImage,
+            MultipartFile optionBImage,
+            MultipartFile optionCImage,
+            MultipartFile optionDImage) throws Exception {
+
+        try {
+        	
+System.out.println(question);
+            // Save question image
+            if (questionImage != null && !questionImage.isEmpty()) {
+            	question.setImage(saveFile(questionImage, question.getId(), "question"));
+            }
+
+            // Save option images
+            if (optionAImage != null && !optionAImage.isEmpty()) {
+            	question.setOptionA(saveFile(optionAImage, question.getId(), "optionA"));
+            	question.setAImage(true);
+            }
+            if (optionBImage != null && !optionBImage.isEmpty()) {
+            	question.setOptionB(saveFile(optionBImage, question.getId(),"optionB"));
+            	question.setBImage(true);
+            }
+            if (optionCImage != null && !optionCImage.isEmpty()) {
+            	question.setOptionC(saveFile(optionCImage, question.getId(),"optionC"));
+            	question.setCImage(true);
+            }
+            if (optionDImage != null && !optionDImage.isEmpty()) {
+            	question.setOptionD(saveFile(optionDImage, question.getId(),"optionD"));
+            	question.setDImage(true);
+            }
+
+            return questionRepository.save(question);
+
+        } catch (IOException e) {
+            throw new Exception("File saving error: " + e.getMessage(), e);
+        }
+    }
+
 }

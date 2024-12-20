@@ -66,7 +66,7 @@ const Sidebar = () => {
               Manage Difficulty Levels
             </NavLink>
             <NavLink
-              to="/exams"
+              to="/manageexams"
               className={({ isActive }) => (isActive ? "active" : "")}
               onClick={toggleSidebar}
             >

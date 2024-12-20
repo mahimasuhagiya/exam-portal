@@ -71,12 +71,26 @@ public class QuestionController {
      
     }
 
-//    // Update an existing question
-//    @PutMapping("/{id}")
-//    public ResponseEntity<Question> updateQuestion(@PathVariable Long id, @RequestBody Question questionDetails) {
-//        Question updatedQuestion = questionService.updateQuestion(id, questionDetails);
-//        return updatedQuestion != null ? ResponseEntity.ok(updatedQuestion) : ResponseEntity.notFound().build();
-//    }
+    @PutMapping
+    public ResponseEntity<Question> updateQuestion(
+    		@RequestPart("question") String questionJson, // JSON data
+            @RequestPart(value = "imagee", required = false) MultipartFile questionImage,
+            @RequestPart(value = "optionAImage", required = false) MultipartFile optionAImage,
+            @RequestPart(value = "optionBImage", required = false) MultipartFile optionBImage,
+            @RequestPart(value = "optionCImage", required = false) MultipartFile optionCImage,
+            @RequestPart(value = "optionDImage", required = false) MultipartFile optionDImage) {
+
+        try {
+        	//map json data to question model
+        	Question question = new ObjectMapper().readValue(questionJson, Question.class);
+
+        	 Question savedQuestion = questionService.updateQuestion(
+                    question, questionImage, optionAImage, optionBImage, optionCImage, optionDImage);
+            return ResponseEntity.ok(savedQuestion);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+    }
 
     // Delete a question
     @DeleteMapping("/{id}")

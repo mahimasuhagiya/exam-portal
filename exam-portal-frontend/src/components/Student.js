@@ -152,7 +152,7 @@ const Student = () => {
                 );
                 toast.success(`Student ${response.data.active ? "activated" : "deactivated"} successfully!`);
             } catch (error) {
-                toast.error("Error toggling student status. Please try again.");
+                toast.error("Error which changing student status. Please try again.");
             }
         };
     
