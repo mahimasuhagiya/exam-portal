@@ -2,6 +2,8 @@ package com.exam.model;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -16,8 +18,8 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Data
-@AllArgsConstructor 
-@NoArgsConstructor 
+@AllArgsConstructor
+@NoArgsConstructor
 public class Exam {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,12 +29,15 @@ public class Exam {
 	@JoinColumn(name = "difficulty_level_id")
 	private DifficultyLookup difficulty;
 	private int durationMinutes;
+	private int passingMarks;
 	private int numberOfQuestions;
 	private boolean isActive;
-	
+
 	@OneToMany(mappedBy = "exam", cascade = CascadeType.ALL)
+	@JsonIgnore
 	private List<questionsAttempt> attempts;
-    @OneToMany(mappedBy = "exam", cascade = CascadeType.ALL)
-    private List<ExamQuestion> examQuestions;
-	
+	@OneToMany(mappedBy = "exam", cascade = CascadeType.ALL)
+	@JsonIgnore
+	private List<ExamQuestion> examQuestions;
+
 }

@@ -1,30 +1,31 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Home from './components/Home';
 import Dashboard from './components/Dashboard';
 import { Col, Container, Row } from 'reactstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import ViewUsers from './components/ViewUsers';
 import CollegePage from './components/CollegePage';
 import QuestionCategories from './components/QuestionCategories';
 import Difficulty from './components/Difficulty';
 import Student from './components/Student';
 import Questions from './components/Questions';
 import Exams from './components/Exams';
+import StudentDashboard from './components/StudentDashboard';
+import ExamPage from './components/ExamPage';
 
 function App() {
- // localStorage.setItem("userId",1);
-  const isLoggedIn = (localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null)? true:false;
+  const isLoggedIn = localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null;
+  const isAdmin = ["EXAMINER", "ADMIN"].includes(localStorage.getItem("role"));
 
   return (
     <Router>
       <Row>
-      <Header /></Row>
+        <Header /></Row>
       <Container fluid>
         {isLoggedIn ? (
           <Row>
+            {isAdmin ?
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/dashboard" element={<Dashboard />} />
@@ -35,13 +36,20 @@ function App() {
                 <Route path="/questions" element={<Questions />} />
                 <Route path="/question-categories" element={<QuestionCategories />} />
               </Routes>
+              :
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/student" element={<StudentDashboard />} />
+                <Route path="/exam" element={<ExamPage />} />
+              </Routes>
+            }
           </Row>
         ) : (
           <div>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-          </Routes>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+            </Routes>
           </div>
         )}
       </Container>

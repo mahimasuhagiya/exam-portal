@@ -5,6 +5,7 @@ import { SignupForm } from './signupForm';
 import { motion } from 'framer-motion';
 import { AccountContext } from './accountContext'
 
+
 const BoxContainer = styled.div`
   width: 280px;
   min-height: 550px;
@@ -15,6 +16,7 @@ const BoxContainer = styled.div`
   box-shadow: 0 0 2px rgba(15, 15, 15, 0.28);
   position: relative;
   overflow: hidden;
+  margin-top:40px;
 `;
 
 const TopContainer = styled.div`
@@ -37,9 +39,10 @@ const BackDrop = styled(motion.div)`
   top: -290px;
   left: -70px;
   transform: rotate(60deg);
-  background: linear-gradient(
-    58deg, rgba(243,172,18,1) 20%, rgba(241,196,15,1) 100%
+  background: darkslategrey;
+
   );
+  
 `;
 
 const HeaderContainer = styled.div`

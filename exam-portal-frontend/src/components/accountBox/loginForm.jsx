@@ -39,11 +39,12 @@ export function LoginForm(props) {
             const  role  = response.data.role;
             localStorage.setItem('jwtToken', token);
             localStorage.setItem('userId', userId);
+            localStorage.setItem('role', role);
             console.log(token);
             if(role=="ADMIN" || role=="EXAMINER")
                window.location.href = '/dashboard';
             else
-            window.location.href ="/userDashboard";
+            window.location.href ="/student";
         } catch (err) {
             setError('Login failed. Please check your credentials.',err);
         }

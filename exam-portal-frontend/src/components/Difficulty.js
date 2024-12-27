@@ -145,7 +145,7 @@ const Difficulty = () => {
                         onClick={() => openEditForm(params.row)}
                     >
                         Edit
-                    </button>
+                    </button>&nbsp;
                     <button
                         className="btn btn-danger btn-sm"
                         onClick={() => deleteLevel(params.row.id)}

@@ -149,7 +149,7 @@ const CollegePage = () => {
             onClick={() => openEditForm(params.row)}
           >
             Edit
-          </button>
+          </button>&nbsp;
           <button
             className="btn btn-danger btn-sm"
             onClick={() => deleteCollege(params.row.id)}

@@ -9,9 +9,13 @@ import "../css/styles.css";
 
 const Exams = () => {
     const [examsData, setExamsData] = useState([]);
+    const [questionData, setQuestionData] = useState([]);
+    const [examQuestionData, setExamQuestionData] = useState([]);
     const [difficultiesData, setDifficultiesData] = useState([]);
     const [searchText, setSearchText] = useState("");
+    const [searchQuestionText, setQuestionSearchText] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [selectedExam, setSelectedExam] = useState(null);
     const [newExam, setNewExam] = useState({
@@ -19,7 +23,8 @@ const Exams = () => {
         difficulty: { id: "" },
         durationMinutes: "",
         numberOfQuestions: "",
-        active: true, 
+        passingMarks: "",
+        active: true,
     });
     const token = localStorage.getItem("jwtToken");
 
@@ -52,8 +57,36 @@ const Exams = () => {
             toast.error("Error fetching difficulties data!");
         }
     };
+    const fetchQuestions = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/questions`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+            });
+            setQuestionData(response.data);
+        } catch (error) {
+            toast.error("Error fetching questions data!");
+        }
+    };
+    const fetchExamQuestions = async (examId) => {
+        try {
+            const response = await axios.get(`${API_URL}/exam_questions/exam/${examId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+            });
+            setExamQuestionData(response.data);
+        } catch (error) {
+            toast.error("Error fetching exam's questions!");
+        }
+    };
 
     useEffect(() => {
+
+        fetchQuestions();
         fetchExams();
         fetchDifficulties();
     }, [token]);
@@ -67,9 +100,17 @@ const Exams = () => {
                 difficulty: { id: "" },
                 durationMinutes: "",
                 numberOfQuestions: "",
+                passingMarks: "",
                 active: true,
             });
             setIsEditing(false);
+        }
+    };
+    const toggleQuestionModal = (flag, exam) => {
+        setIsQuestionModalOpen(!isQuestionModalOpen);
+        if (flag == true) {
+            setSelectedExam(exam);
+            fetchExamQuestions(exam.id);
         }
     };
 
@@ -85,8 +126,12 @@ const Exams = () => {
 
     // Save exam (Add/Edit)
     const saveExam = async () => {
-        if (!newExam.title || !newExam.difficulty.id) {
+        if (!newExam.title || !newExam.difficulty.id || !newExam.durationMinutes || !newExam.numberOfQuestions || !newExam.passingMarks) {
             toast.warn("Please fill out all required fields.");
+            return;
+        }
+        if (newExam.passingMarks > newExam.numberOfQuestions || newExam.passingMarks < 0) {
+            toast.warn("Passing marks should greter than 0 and equal to / less than number of questions.");
             return;
         }
 
@@ -146,15 +191,48 @@ const Exams = () => {
                 );
                 toast.success(`Exam ${response.data.active ? "activated" : "deactivated"} successfully!`);
             } catch (error) {
-                toast.error("Error which changing exam status. Please try again.");
+                const errorMessage = error.response?.data?.message || error.message || "An unexpected error occurred.";
+                toast.error(errorMessage);
             }
         };
-    
+
         showToastConfirmation(
             action,
             `exam "${exam.title}"`,
             toggleCallback
         );
+    };
+    const manageExamQuestion = async (e, id) => {
+        const { checked } = e.target;
+        if (e.target.checked) {
+            if (examQuestionData.length == selectedExam.numberOfQuestions) {
+                toast.error("Exam is of " + selectedExam.numberOfQuestions + " questions only which are alredy selected.");
+                return;
+            }
+            // Add the id to examQuestionData
+            setExamQuestionData((prev) => [...prev, id]);
+        } else {
+            // Remove the id from examQuestionData
+            setExamQuestionData((prev) => prev.filter((questionId) => questionId !== id));
+        }
+        try {
+            if (checked) {
+                await axios.post(`${API_URL}/exam_questions`, {
+                    exam: { id: selectedExam.id },
+                    question: { id }
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            } else {
+                await axios.delete(`${API_URL}/exam_questions`, {
+                    data: { exam: { id: selectedExam.id }, question: { id } },
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            }
+        } catch (error) {
+            toast.error("Failed to update question. Please try again.");
+            fetchExamQuestions(selectedExam.id);
+        }
     };
 
     // Delete exam
@@ -187,16 +265,17 @@ const Exams = () => {
             difficulty: exam.difficulty,
             durationMinutes: exam.durationMinutes,
             numberOfQuestions: exam.numberOfQuestions,
+            passingMarks: exam.passingMarks,
             active: exam.active,
         });
         toggleModal();
     };
 
     // Filtered exams based on search text
-    const filteredData = examsData.filter((exam) =>
+    const filteredData = Array.isArray(examsData) ? examsData.filter((exam) =>
         exam.title.toLowerCase().includes(searchText.toLowerCase()) ||
         exam.difficulty?.name.toLowerCase().includes(searchText.toLowerCase())
-    );
+    ) : [];
 
     // Columns for DataGrid
     const columns = [
@@ -210,6 +289,7 @@ const Exams = () => {
         },
         { field: "durationMinutes", headerName: "Duration (mins)", flex: 1 },
         { field: "numberOfQuestions", headerName: "Number of Questions", flex: 1 },
+        { field: "passingMarks", headerName: "Passing Marks", flex: 1 },
         {
             field: "isActive",
             headerName: "Status",
@@ -226,12 +306,15 @@ const Exams = () => {
         {
             field: "actions",
             headerName: "Actions",
-            flex: 1,
+            flex: 2,
             renderCell: (params) => (
                 <div>
+                    <button className="btn btn-sm mr-2" style={{ backgroundColor: "#ecaa44" }} onClick={() => toggleQuestionModal(true, params.row)}>
+                        Add/Remove Question
+                    </button>&nbsp;
                     <button className="btn btn-primary btn-sm mr-2" onClick={() => openEditForm(params.row)}>
                         Edit
-                    </button>
+                    </button>&nbsp;
                     <button className="btn btn-danger btn-sm" onClick={() => deleteExam(params.row.id)}>
                         Delete
                     </button>
@@ -239,6 +322,99 @@ const Exams = () => {
             ),
         },
     ];
+    const filteredQuestionData = questionData
+        .map((question) => ({
+            ...question,
+            select: examQuestionData.includes(question.id) ? 1 : 0, // Add "select" property
+        }))
+        .filter((question) =>
+            question.question?.toLowerCase().includes(searchQuestionText.toLowerCase()) ||
+            question.difficulty?.name?.toLowerCase().includes(searchQuestionText.toLowerCase()) ||
+            question.category?.name?.toLowerCase().includes(searchQuestionText.toLowerCase()) ||
+            question.optionA?.toLowerCase().includes(searchQuestionText.toLowerCase()) ||
+            question.optionB?.toLowerCase().includes(searchQuestionText.toLowerCase()) ||
+            question.optionC?.toLowerCase().includes(searchQuestionText.toLowerCase()) ||
+            question.optionD?.toLowerCase().includes(searchQuestionText.toLowerCase())
+        )
+        .sort((a, b) => {
+            // Sort by "select" (checked first), then by "id" (ascending)
+            if (b.select !== a.select) {
+                return b.select - a.select; // Checked first
+            }
+            return a.id - b.id; // Then by ID
+        });
+
+    // Columns for DataGrid
+    const QuestionColumns = [
+        {
+            field: "select",
+            headerName: "Select",
+            width: 100,
+            renderCell: (params) => (
+                <input
+                    type="checkbox"
+                    checked={examQuestionData.includes(params.row.id)}
+                    onChange={(e) => manageExamQuestion(e, params.row.id)}
+                />
+            ),
+        },
+        { field: "id", headerName: "ID", width: 100 },
+        { field: "question", headerName: "Question", flex: 1 },
+        {
+            field: "image",
+            headerName: "Question Image",
+            flex: 1,
+            renderCell: (params) => (
+                params.value ? <img src={`${API_URL}/${params.value}`} alt="Question" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : "N/A"
+            )
+        },
+        {
+            field: "optionA",
+            headerName: "Option A",
+            flex: 1,
+            renderCell: (params) => (
+                params.row.aimage ? <img src={`${API_URL}/${params.value}`} alt="Option A" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"
+            )
+        },
+        {
+            field: "optionB",
+            headerName: "Option B",
+            flex: 1,
+            renderCell: (params) => (
+                params.row.bimage ? <img src={`${API_URL}/${params.value}`} alt="Option B" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"
+            )
+        },
+        {
+            field: "optionC",
+            headerName: "Option C",
+            flex: 1,
+            renderCell: (params) => (
+                params.row.cimage ? <img src={`${API_URL}/${params.value}`} alt="Option C" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"
+            )
+        },
+        {
+            field: "optionD",
+            headerName: "Option D",
+            flex: 1,
+            renderCell: (params) => (
+                params.row.dimage ? <img src={`${API_URL}/${params.value}`} alt="Option D" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"
+            )
+        },
+        { field: "correctAnswer", headerName: "Correct Answer", flex: 1 },
+        {
+            field: "difficulty",
+            headerName: "Difficulty",
+            flex: 1,
+            renderCell: (params) => params.value?.name || "N/A"
+        },
+        {
+            field: "category",
+            headerName: "Category",
+            flex: 1,
+            renderCell: (params) => params.value?.name || "N/A"
+        },
+    ];
+
 
     return (
         <div>
@@ -321,6 +497,16 @@ const Exams = () => {
                                     onChange={handleInputChange}
                                 />
                             </div>
+                            <div className="form-group">
+                                <label>Passing Marks:</label>
+                                <input
+                                    type="number"
+                                    className="form-control"
+                                    name="passingMarks"
+                                    value={newExam.passingMarks}
+                                    onChange={handleInputChange}
+                                />
+                            </div>
                         </form>
                     </div>
                     <div className="modal-footer">
@@ -330,6 +516,37 @@ const Exams = () => {
                         <button className="btn btn-primary" onClick={saveExam}>
                             {isEditing ? "Edit" : "Add"}
                         </button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal isOpen={isQuestionModalOpen} toggle={toggleQuestionModal}>
+                <div className="modal-content">
+                    <div className="modal-header">Add/Remove Question</div>
+                    <div className="modal-body">
+                        <div className="d-flex justify-content-between mb-4">
+                            <input
+                                type="text"
+                                placeholder="Search Exams"
+                                className="form-control"
+                                value={searchQuestionText}
+                                onChange={(e) => setQuestionSearchText(e.target.value)}
+                            />
+                        </div>
+                        <div style={{ width: "100%" }}>
+                            <DataGrid
+                                rows={filteredQuestionData}
+                                columns={QuestionColumns}
+                                pageSize={10}
+                                rowsPerPageOptions={[5, 10, 15]}
+                            />
+                        </div>
+                    </div>
+                    <div className="modal-footer">
+                        <button className="btn btn-secondary" onClick={toggleQuestionModal}>
+                            Cancel
+                        </button>
+
                     </div>
                 </div>
             </Modal>

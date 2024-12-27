@@ -1,16 +1,19 @@
-import React from 'react';
+import React , { useEffect }from 'react';
 import { Container, Row, Col, Card, CardBody, CardTitle } from 'reactstrap';
-import ViewUsers from './ViewUsers';
-import Sidebar from './Sidebar';
-import Header from './Header';
 import { useNavigate } from 'react-router-dom';
 const Dashboard = () => {
-  const isLoggedIn = (localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null)? true:false;
-
+  const isLoggedIn = localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null;
   const navigate = useNavigate();
+    // Redirect if not logged in
+    useEffect(() => {
+      if (!isLoggedIn) {
+        navigate('/');
+      }
+    }, [isLoggedIn, navigate]);
+  
   return (
     <Container>
-      {isLoggedIn?<h1>Admin Dashboard </h1>:  navigate('/')}
+      <h1>Admin Dashboard </h1>
     </Container>
   );
 };

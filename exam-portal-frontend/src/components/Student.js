@@ -152,7 +152,7 @@ const Student = () => {
                 );
                 toast.success(`Student ${response.data.active ? "activated" : "deactivated"} successfully!`);
             } catch (error) {
-                toast.error("Error which changing student status. Please try again.");
+                toast.error("Error while changing student status. Please try again.");
             }
         };
     
@@ -196,7 +196,7 @@ const Student = () => {
             address: student.address,
             college: student.college,
             role: "STUDENT",
-            isActive: student.isActive,
+            active: student.active,
         });
         toggleModal(); // Open the modal
     };
@@ -255,7 +255,7 @@ const Student = () => {
                         onClick={() => openEditForm(params.row)}
                     >
                         Edit
-                    </button>
+                    </button>&nbsp;
                     <button
                         className="btn btn-danger btn-sm"
                         onClick={() => deleteStudent(params.row.id)}
@@ -326,7 +326,7 @@ const Student = () => {
                                     onChange={handleInputChange}
                                 />
                             </div>
-                            <div className="form-group">
+                            {!isEditing ?  <div className="form-group">
                                 <label>Password:</label>
                                 <input
                                     type="password"
@@ -335,7 +335,7 @@ const Student = () => {
                                     value={newStudent.password}
                                     onChange={handleInputChange}
                                 />
-                            </div>
+                            </div>: <div></div>}
                             <div className="form-group">
                                 <label>Phone:</label>
                                 <input

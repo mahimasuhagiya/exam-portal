@@ -1,70 +1,97 @@
 /* Sidebar Container */
 .sidebar-container {
-    position: relative;
-    display: flex;
-  }
-  
-  /* Sidebar Toggle Button */
-  .sidebar-toggle {
-    /* position: fixed; */
-    top: 23px;
-    margin-left: 20px;
-    font-size: 24px;
-    /* color:  #007bff; */
-    cursor: pointer;
-    z-index: 1200; /* Above other content */
-  }
-  
-  /* Sidebar */
+  position: relative;
+  display: flex;
+}
+
+/* Sidebar Toggle Button */
+.sidebar-toggle {
+  top: 23px;
+  margin-left: 20px;
+  font-size: 24px;
+  color: #ffffff;
+  cursor: pointer;
+  z-index: 1200; /* Above other content */
+}
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: -250px; /* Initially hidden */
+  height: 100%;
+  width: 250px;
+  background:darkslategray;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+  transition: left 0.3s ease-in-out;
+  z-index: 1100;
+  padding: 90px 0 20px;
+}
+
+/* Open Sidebar */
+.sidebar.open {
+  left: 0; /* Slide into view */
+}
+
+/* Sidebar Menu */
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Sidebar Menu Items */
+.sidebar-menu li {
+  margin: 15px 0;
+}
+
+.sidebar-menu a {
+  text-decoration: none;
+  font-size: 18px;
+  color: #ffffff; /* White text */
+  font-weight: bold;
+  padding: 10px 15px;
+  display: block;
+  border-radius: 4px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+/* Hover Effect on Menu Links */
+.sidebar-menu a:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Active Sidebar Link */
+.sidebar-menu a.active {
+  background-color: #ffffff; /* Light Gray */
+  color: #00796b; /* Teal */
+  font-weight: bold;
+}
+
+/* Close Sidebar Button */
+.sidebar-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 24px;
+  cursor: pointer;
+  color: #ffffff;
+  z-index: 1300;
+}
+
+/* Responsive Adjustments for Smaller Screens */
+@media (max-width: 768px) {
   .sidebar {
-    position: fixed;
-    top: 0;
-    left: -250px; /* Initially hidden */
-    height: 100%;
-    width: 250px;
-    background: linear-gradient(90deg, rgba(243, 172, 18, 1), rgba(241, 196, 15, 1));
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
-    transition: left 0.3s ease-in-out;
-    z-index: 1100;
-    padding: 90px 0 20px;
+    width: 200px; /* Narrower sidebar on mobile */
   }
-  
-  /* Open Sidebar */
-  .sidebar.open {
-    left: 0; /* Slide into view */
-  }
-  
-  /* Sidebar Menu */
-  .sidebar-menu {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  
-  .sidebar-menu li {
-    margin: 15px 0;
-  }
-  
+
   .sidebar-menu a {
-    text-decoration: none;
-    font-size: 18px;
-    color: white;
-    font-weight: bold;
-    padding: 10px 15px;
-    display: block;
-    border-radius: 4px;
-    transition: background-color 0.2s, color 0.2s;
+    font-size: 16px;
+    padding: 12px 15px;
   }
-  
-  .sidebar-menu a:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    color: rgba(255, 255, 255, 0.8);
+
+  .sidebar-toggle {
+    font-size: 30px; /* Larger icon on mobile */
   }
-  
-  /* Active Sidebar Link */
-  .sidebar-menu a.active {
-    background-color: white;
-    color: #f3ac12;
-    font-weight: bold;
-  }
-  
+}

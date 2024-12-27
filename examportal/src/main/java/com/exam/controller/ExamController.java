@@ -32,6 +32,17 @@ public class ExamController {
 		}
 	}
 
+	@GetMapping("/active")
+	public ResponseEntity<?> getAllActiveExams() {
+		try {
+			List<Exam> exams = examService.getAllActiveExams();
+			return ResponseEntity.ok(exams);
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body(Map.of("message", "Error retrieving exams: " + e.getMessage()));
+		}
+	}
+
 	@GetMapping("/{id}")
 	public ResponseEntity<?> getExamById(@PathVariable Long id) {
 		Optional<Exam> exam = examService.getExamById(id);
@@ -78,12 +89,13 @@ public class ExamController {
 	}
 
 	@PutMapping("/status/{id}")
-	public ResponseEntity<Exam> updateExamStatus(@PathVariable Long id) {
+	public ResponseEntity<?> updateExamStatus(@PathVariable Long id) {
 		try {
 			Exam exam = examService.updateExamStatus(id);
 			return ResponseEntity.ok(exam);
-		} catch (RuntimeException e) {
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body(Map.of("message", "Error retrieving exams: " + e.getMessage()));
 		}
 	}
 

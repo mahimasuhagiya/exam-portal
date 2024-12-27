@@ -4,7 +4,7 @@ import { FaBars, FaTimes } from "react-icons/fa";
 import "../css/sidebar.css";
 
 const Sidebar = () => {
-  const isLoggedIn = (localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null)? true:false;
+  const isLoggedIn = localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null;
 
   const [isOpen, setIsOpen] = useState(false);
 

@@ -134,6 +134,11 @@ const Question = () => {
 
     // Save question (Add/Edit)
     const saveQuestion = async () => {
+        if (!newQuestion.question || !newQuestion.difficulty.id || !newQuestion.category.id || !newQuestion.correctAnswer
+             || !newQuestion.optionA) {
+            toast.warn("Please fill out all required fields.");
+            return;
+        }
         const formData = new FormData();
         formData.append("question", JSON.stringify({
             id: newQuestion.id || null,
@@ -321,7 +326,7 @@ const Question = () => {
                         onClick={() => openEditForm(params.row)}
                     >
                         Edit
-                    </button>
+                    </button>&nbsp;
                     <button
                         className="btn btn-danger btn-sm"
                         onClick={() => deleteQuestion(params.row.id)}

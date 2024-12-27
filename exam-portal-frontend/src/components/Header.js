@@ -9,9 +9,8 @@ import "../css/sidebar.css";
 
 const Header = () => {
   const navigate = useNavigate();
-  const isLoggedIn = (localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null)? true:false;
-
-
+  const isLoggedIn = localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null;
+  const isAdmin = localStorage.getItem("role") == "EXAMINER" || localStorage.getItem("role") == "ADMIN";
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("userId");
@@ -23,7 +22,7 @@ const Header = () => {
     <header className="exam-portal-header">
       <Container fluid>
       <Row>
-        <Col lg={3}>{isLoggedIn ? <Sidebar/>:<></>}</Col>
+        <Col lg={3}>{isLoggedIn ? isAdmin?<Sidebar/>:<></>:<></>}</Col>
         <Col   lg={6} className="d-flex justify-content-center"> 
           <div className="header-logo"><img src={logo} alt="Exam Portal Logo" /></div>
         </Col>

@@ -9,6 +9,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import com.exam.model.ExamQuestion;
 import com.exam.model.Role;
 import com.exam.model.User;
 import com.exam.repository.UserRepository;
@@ -96,7 +98,7 @@ public class UserService implements UserDetailsService {
         if (isEmailExist(user.getEmail()) && !isSameEmail(user.getId(), user.getEmail())) {
             throw new RuntimeException("Email already exists.");
         }
-        
+       // user.setPassword(passwordEncoder.encode(user.getPassword()));
         if (userRepository.existsById(user.getId())) {
             return userRepository.save(user);
         }

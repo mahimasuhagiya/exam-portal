@@ -146,7 +146,7 @@ const QuestionCategories = () => {
                         onClick={() => openEditForm(params.row)}
                     >
                         Edit
-                    </button>
+                    </button>&nbsp;
                     <button
                         className="btn btn-danger btn-sm"
                         onClick={() => deleteCategory(params.row.id)}
