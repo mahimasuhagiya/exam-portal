@@ -3,7 +3,6 @@ package com.exam.controller;
 import com.exam.model.CollegeLookup;
 import com.exam.service.CollegeLookupService;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,12 +28,6 @@ public class CollegeLookupController {
     public ResponseEntity<CollegeLookup> createCollege(@RequestBody CollegeLookup college) {
         CollegeLookup savedCollege = collegeService.saveCollege(college);
         return new ResponseEntity<>(savedCollege, HttpStatus.CREATED);
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<CollegeLookup> getCollegeById(@PathVariable Long id) {
-        Optional<CollegeLookup> college = collegeService.getCollegeById(id);
-        return college.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping

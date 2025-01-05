@@ -13,11 +13,13 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class Exam {
@@ -25,6 +27,7 @@ public class Exam {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 	private String title;
+    private boolean isProgramming;
 	@ManyToOne
 	@JoinColumn(name = "difficulty_level_id")
 	private DifficultyLookup difficulty;
@@ -35,9 +38,10 @@ public class Exam {
 
 	@OneToMany(mappedBy = "exam", cascade = CascadeType.ALL)
 	@JsonIgnore
-	private List<questionsAttempt> attempts;
-	@OneToMany(mappedBy = "exam", cascade = CascadeType.ALL)
-	@JsonIgnore
 	private List<ExamQuestion> examQuestions;
+	
+	@OneToMany(mappedBy = "exam", cascade = CascadeType.ALL)
+    @JsonIgnore
+	private List<Result> results;
 
 }

@@ -180,7 +180,7 @@ const Student = () => {
             }
         };
 
-        showToastConfirmation("delete", "student", deleteCallback);
+        showToastConfirmation("delete", "student.", deleteCallback,"All results of the student will also get deleted");
     };
 
     // Open Edit Form

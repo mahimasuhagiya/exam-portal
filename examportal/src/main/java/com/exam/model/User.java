@@ -1,10 +1,10 @@
 package com.exam.model;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,12 +18,14 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "users")
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class User{
@@ -46,7 +48,12 @@ public class User{
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 
-	@OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
-	private List<questionsAttempt> attempts;
+	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+	@JsonIgnore
+	private List<QuestionsAttempt> attempts;
+	
+	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonIgnore
+	private List<Result> results;
 
 }

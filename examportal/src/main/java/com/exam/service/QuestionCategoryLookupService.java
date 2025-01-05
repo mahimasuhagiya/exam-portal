@@ -11,41 +11,43 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class QuestionCategoryLookupService{
+public class QuestionCategoryLookupService {
 
 	@Autowired
 	private QuestionCategoryLookupRepository questionCategoryLookupRepository;
 
-
 	public QuestionCategoryLookup saveQuestionCategory(QuestionCategoryLookup questionCategory) {
+		if (isCategoryExist(questionCategory.getName())) {
+			throw new IllegalArgumentException("Category already exists.");
+		}
 		return questionCategoryLookupRepository.save(questionCategory);
 	}
-
-
-	public Optional<QuestionCategoryLookup> getQuestionCategoryById(Long id) {
-		return questionCategoryLookupRepository.findById(id);
-	}
-
 
 	public List<QuestionCategoryLookup> getAllQuestionCategories() {
 		return questionCategoryLookupRepository.findAll();
 	}
 
-
 	public QuestionCategoryLookup updateQuestionCategory(QuestionCategoryLookup questionCategory) {
-		if (questionCategoryLookupRepository.existsById(questionCategory.getId())) {
-			questionCategory.setId(questionCategory.getId());
-			return questionCategoryLookupRepository.save(questionCategory);
+		if (isCategoryExist(questionCategory.getName()) && !isSameCategory(questionCategory.getId(), questionCategory.getName())) {
+			throw new RuntimeException("Category already exists.");
 		}
-		throw new RuntimeException("Question category not found with id " + questionCategory.getId());
+		return questionCategoryLookupRepository.save(questionCategory);
 	}
 
-
 	public void deleteQuestionCategory(Long id) {
-		if (questionCategoryLookupRepository.existsById(id)) {
-			questionCategoryLookupRepository.deleteById(id);
-		} else {
-			throw new RuntimeException("Question category not found with id " + id);
-		}
+		questionCategoryLookupRepository.deleteById(id);
+	}
+
+	// Helper method to check if the category exists
+	private boolean isCategoryExist(String category) {
+		Optional<QuestionCategoryLookup> existingCategory= questionCategoryLookupRepository.findByName(category);
+		return existingCategory.isPresent();
+	}
+
+	// Helper method to check if the category name is the same as current
+	// (for update case)
+	private boolean isSameCategory(Long id, String category) {
+		Optional<QuestionCategoryLookup> Category = questionCategoryLookupRepository.findById(id);
+		return Category.isPresent() && Category.get().getName().equals(category);
 	}
 }

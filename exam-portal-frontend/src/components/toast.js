@@ -1,9 +1,9 @@
 import { toast } from "react-toastify";
 import "../css/styles.css";
-const showToastConfirmation = (action,option, callback) => {
+const showToastConfirmation = (action,option, callback,attention) => {
     toast(
       <div style={{ textAlign: "center" }}>
-        <p>Are you sure you want to {action} this {option}?</p>
+        <p>Are you sure you want to {action} this {option}? <strong>{attention}</strong></p>
         <div>
           <button
             className="btn btn-danger btn-sm mr-2"

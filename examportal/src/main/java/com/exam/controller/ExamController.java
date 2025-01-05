@@ -5,7 +5,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.exam.model.Exam;
+import com.exam.model.Result;
 import com.exam.service.ExamService;
+import com.exam.service.ResultService;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -14,8 +18,11 @@ import java.util.Optional;
 @RequestMapping("/exams")
 public class ExamController {
 
-	private final ExamService examService;
-
+	@Autowired
+	private ExamService examService;
+	@Autowired
+	private ResultService resultService;
+	
 	@Autowired
 	public ExamController(ExamService examService) {
 		this.examService = examService;
@@ -31,11 +38,27 @@ public class ExamController {
 					.body(Map.of("message", "Error retrieving exams: " + e.getMessage()));
 		}
 	}
+	@GetMapping("/count")
+    public Long countExams() {
+        return examService.countExams();
+    }
+	@GetMapping("/active_count")
+    public Long countActiveExams() {
+        return examService.countActiveExams();
+    }
 
-	@GetMapping("/active")
-	public ResponseEntity<?> getAllActiveExams() {
+	@GetMapping("/active/{userId}")
+	public ResponseEntity<?> getAllActiveExamsByStudents(@PathVariable Long userId) {
 		try {
 			List<Exam> exams = examService.getAllActiveExams();
+			List<Exam> examsToRemove = new ArrayList<>();
+			for(Exam ex : exams) {
+				Optional<Result> res = resultService.getResultByExamAndUser(ex.getId(), userId);
+				if(res.isPresent()) {
+					examsToRemove.add(ex);
+				}
+			}
+			exams.removeAll(examsToRemove);
 			return ResponseEntity.ok(exams);
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

@@ -115,7 +115,7 @@ const CollegePage = () => {
       }
     };
 
-    showToastConfirmation("delete", "College", deleteCallback);
+    showToastConfirmation("delete", "College.", deleteCallback,"All the students of this collge will also get deleted");
   };
 
   // Open Edit Form

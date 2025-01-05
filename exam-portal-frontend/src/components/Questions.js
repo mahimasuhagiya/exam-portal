@@ -3,9 +3,11 @@ import React, { useEffect, useState } from "react";
 import API_URL from "../services/authService";
 import { toast, ToastContainer } from "react-toastify";
 import { DataGrid } from "@mui/x-data-grid";
-import { Modal } from "reactstrap";
+import { Modal, Row } from "reactstrap";
 import showToastConfirmation from "./toast";
+import { Card, CardBody, CardTitle, CardText, Button } from "reactstrap";
 import "../css/styles.css";
+import ReactQuill from "react-quill";
 
 const Question = () => {
     const [questionData, setQuestionData] = useState([]);
@@ -16,6 +18,7 @@ const Question = () => {
     const [selectedQuestion, setSelectedQuestion] = useState(null);
     const [searchText, setSearchText] = useState("");
     const getRowHeight = () => "auto";
+    const [isProgramming, setQuestionType] = useState(0);
     const [newQuestion, setNewQuestion] = useState({
         question: "",
         isAImage: false,
@@ -105,24 +108,31 @@ const Question = () => {
                 category: { id: null, name: "" },
             });
             setIsEditing(false);
+            setQuestionType(0);
         }
     };
 
     // Handle input change
     const handleInputChange = (e) => {
-        const { name, value, type, checked, files } = e.target;
-        if (name === "category" || name === "difficulty") {
-            const options = name === "category" ? categoryOptions : difficultyOptions;
-            const selectedOption = options.find((option) => option.id == value);
-            if (selectedOption) {
-                setNewQuestion((prev) => ({ ...prev, [name]: { id: value, name: selectedOption.name } }));
+        if (e.target == undefined) {
+            setNewQuestion((prev) => ({ ...prev, correctAnswer: e }));
+        }
+        else {
+            const { name, value, type, checked, files } = e.target;
+            if (name === "category" || name === "difficulty") {
+                const options = name === "category" ? categoryOptions : difficultyOptions;
+                const selectedOption = options.find((option) => option.id == value);
+                if (selectedOption) {
+                    setNewQuestion((prev) => ({ ...prev, [name]: { id: value, name: selectedOption.name } }));
+                }
             }
-        } else if (type === "checkbox") {
-            setNewQuestion((prev) => ({ ...prev, [name]: checked }));
-        } else if (type === "file") {
-            setNewQuestion((prev) => ({ ...prev, [name]: files[0] }));
-        } else {
-            setNewQuestion((prev) => ({ ...prev, [name]: value }));
+            else if (type === "checkbox") {
+                setNewQuestion((prev) => ({ ...prev, [name]: checked }));
+            } else if (type === "file") {
+                setNewQuestion((prev) => ({ ...prev, [name]: files[0] }));
+            } else {
+                setNewQuestion((prev) => ({ ...prev, [name]: value }));
+            }
         }
     };
 
@@ -134,32 +144,38 @@ const Question = () => {
 
     // Save question (Add/Edit)
     const saveQuestion = async () => {
-        if (!newQuestion.question || !newQuestion.difficulty.id || !newQuestion.category.id || !newQuestion.correctAnswer
-             || !newQuestion.optionA) {
+        if (!newQuestion.question || !newQuestion.difficulty.id || !newQuestion.category.id || !newQuestion.correctAnswer) {
             toast.warn("Please fill out all required fields.");
             return;
         }
+        if (isProgramming == 0 && !((newQuestion.optionA || newQuestion.optionAImage) && (newQuestion.optionB || newQuestion.optionBImage))) {
+            toast.warn("Please enter at least 2 options: A and B");
+            return;
+        }
+
         const formData = new FormData();
         formData.append("question", JSON.stringify({
             id: newQuestion.id || null,
             question: newQuestion.question,
-            optionA: newQuestion.optionA,
-            optionB: newQuestion.optionB,
-            optionC: newQuestion.optionC,
-            optionD: newQuestion.optionD,
-            aimage: newQuestion.isAImage,
-            bimage: newQuestion.isBImage,
-            cimage: newQuestion.isCImage,
-            dimage: newQuestion.isDImage,
+            image: isEditing ? newQuestion.image : null,
+            optionA: isProgramming ? null : newQuestion.optionA,
+            optionB: isProgramming ? null : newQuestion.optionB,
+            optionC: isProgramming ? null : newQuestion.optionC,
+            optionD: isProgramming ? null : newQuestion.optionD,
+            aimage: isProgramming ? null : newQuestion.isAImage,
+            bimage: isProgramming ? null : newQuestion.isBImage,
+            cimage: isProgramming ? null : newQuestion.isCImage,
+            dimage: isProgramming ? null : newQuestion.isDImage,
+            programming: isProgramming == 1 ? true : false,
             correctAnswer: newQuestion.correctAnswer,
             category: { "id": newQuestion.category.id, "name": newQuestion.category.name },
             difficulty: { "id": newQuestion.difficulty.id, "name": newQuestion.difficulty.name }
         }));
-        formData.append("imagee", newQuestion.image);
-        formData.append("optionAImage", newQuestion.optionAImage);
-        formData.append("optionBImage", newQuestion.optionBImage);
-        formData.append("optionCImage", newQuestion.optionCImage);
-        formData.append("optionDImage", newQuestion.optionDImage);
+        formData.append("questionImage", newQuestion.image);
+        formData.append("optionBImage", isProgramming ? null : newQuestion.optionBImage);
+        formData.append("optionCImage", isProgramming ? null : newQuestion.optionCImage);
+        formData.append("optionDImage", isProgramming ? null : newQuestion.optionDImage);
+        formData.append("optionAImage", isProgramming ? null : newQuestion.optionAImage);
 
         const saveCallback = async () => {
             try {
@@ -189,7 +205,8 @@ const Question = () => {
 
                 toggleModal(true);
             } catch (error) {
-                toast.error("Error saving question. Please try again.");
+                const errorMessage = error.response?.data?.message || error.message || "An unexpected error occurred.";
+                toast.error(errorMessage);
             }
         };
 
@@ -209,17 +226,23 @@ const Question = () => {
                 setQuestionData((prev) => prev.filter((question) => question.id !== id));
                 toast.success("Question deleted successfully!");
             } catch (error) {
-                toast.error("Error deleting question. Please try again.");
+                const errorMessage = error.response?.data?.message || error.message || "An unexpected error occurred.";
+                toast.error(errorMessage);
             }
         };
 
         showToastConfirmation("delete", "Question", deleteCallback);
     };
+    const handleQuestionTypeChange = (e) => {
+        setQuestionType(e.target.value);
+    };
+
 
     // Open Edit Form
     const openEditForm = (question) => {
         setSelectedQuestion(question);
         setIsEditing(true);
+        setQuestionType(question.programming == true ? 1 : 0);
         setNewQuestion({
             id: question.id,
             question: question.question,
@@ -253,91 +276,6 @@ const Question = () => {
         question.optionD?.toLowerCase().includes(searchText.toLowerCase())
     ).sort((a, b) => b.id - a.id);
 
-    // Columns for DataGrid
-    const columns = [
-        { field: "id", headerName: "ID", width: 50,renderCell: (params) => (<div style={{ whiteSpace: "normal",wordWrap: "break-word",overflow: "hidden",textOverflow: "ellipsis",}}>{params.value}</div>), },
-        { field: "question", headerName: "Question", flex: 2,renderCell: (params) => (<div style={{ whiteSpace: "normal",wordWrap: "break-word",overflow: "hidden",textOverflow: "ellipsis",}}>{params.value}</div>), },
-        {
-            field: "image",
-            headerName: "Question Image",
-            flex: 1,
-            renderCell: (params) => (<div style={{ whiteSpace: "normal",wordWrap: "break-word",overflow: "hidden",textOverflow: "ellipsis",}}>
-              {  params.value ? <img src={`${API_URL}/${params.value}`} alt="Question" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : "N/A"}
-                </div>
-            )
-        },
-        {
-            field: "optionA",
-            headerName: "Option A",
-            flex: 1,
-            renderCell: (params) => (<div style={{ whiteSpace: "normal",wordWrap: "break-word",overflow: "hidden",textOverflow: "ellipsis",}}>
-                {params.row.aimage ? <img src={`${API_URL}/${params.value}`} alt="Option A" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"}
-                </div>
-            )
-        },
-        {
-            field: "optionB",
-            headerName: "Option B",
-            flex: 1,
-            renderCell: (params) => (<div style={{ whiteSpace: "normal",wordWrap: "break-word",overflow: "hidden",textOverflow: "ellipsis",}}>
-                {params.row.bimage ? <img src={`${API_URL}/${params.value}`} alt="Option B" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"}
-                </div>
-            )
-        },
-        {
-            field: "optionC",
-            headerName: "Option C",
-            flex: 1,
-            renderCell: (params) => (<div style={{ whiteSpace: "normal",wordWrap: "break-word",overflow: "hidden",textOverflow: "ellipsis",}}>
-                {params.row.cimage ? <img src={`${API_URL}/${params.value}`} alt="Option C" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"}
-                </div>
-            )
-        },
-        {
-            field: "optionD",
-            headerName: "Option D",
-            flex: 1,
-            renderCell: (params) => (<div style={{ whiteSpace: "normal",wordWrap: "break-word",overflow: "hidden",textOverflow: "ellipsis",}}>
-                {params.row.dimage ? <img src={`${API_URL}/${params.value}`} alt="Option D" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"}
-          </div>
-            )
-        },
-        { field: "correctAnswer", headerName: "Correct Answer", flex: 1 },
-        {
-            field: "difficulty",
-            headerName: "Difficulty",
-            flex: 1,
-            renderCell: (params) => params.value?.name || "N/A"
-        },
-        {
-            field: "category",
-            headerName: "Category",
-            flex: 1,
-            renderCell: (params) => params.value?.name || "N/A"
-        },
-        {
-            field: "actions",
-            headerName: "Actions",
-            width:120,
-            renderCell: (params) => (
-                <div>
-                    <button
-                        className="btn btn-primary btn-sm mr-2"
-                        onClick={() => openEditForm(params.row)}
-                    >
-                        Edit
-                    </button>&nbsp;
-                    <button
-                        className="btn btn-danger btn-sm"
-                        onClick={() => deleteQuestion(params.row.id)}
-                    >
-                        Delete
-                    </button>
-                </div>
-            ),
-        },
-    ];
-
     return (
         <div>
             <ToastContainer />
@@ -350,23 +288,158 @@ const Question = () => {
                     placeholder="Search Questions"
                     className="form-control"
                     value={searchText}
-                    style={{    height: "63px"}}
+                    style={{ height: "63px" }}
                     onChange={(e) => setSearchText(e.target.value)}
                 />
                 <button className="btn btn-primary mb-4" onClick={() => toggleModal(true)}>
                     Add Question
                 </button>
             </div>
-            {/* DataGrid */}
-            <div style={{ width: "100%" }}>
-                <DataGrid
-                    rows={questionData}
-                    columns={columns}
-                    pageSize={10}
-                    getRowHeight={getRowHeight} // Dynamic row height for wrapping
-    
-                    rowsPerPageOptions={[5, 10, 15]}
-                />
+            <div style={{ padding: "20px" }}>
+                {filteredData.length == 0 ?
+                    <Card style={{
+                        width: "100%",
+                        margin: "10px auto",
+                        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                        borderRadius: "10px",
+                    }}>
+                        <CardBody style={{ textAlign: "center", margin: "10px" }}>
+                            <i className="fas fa-exclamation-triangle" ></i> No Questions yet.
+                        </CardBody>
+                    </Card>
+                    :
+                    filteredData.map((question) => (
+                        <Card
+                            key={question.id}
+                            style={{
+                                width: "100%",
+                                margin: "10px auto",
+                                boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                                borderRadius: "10px",
+                            }}
+                        >
+                            <CardBody>
+                                <CardTitle style={{ fontWeight: "bold", marginBottom: "10px" }}>
+                                    ID: {question.id} - {question.question}
+                                </CardTitle>
+
+                                {question.image && (
+                                    <div style={{ textAlign: "center", marginBottom: "10px" }}>
+                                        <img
+                                            src={`${API_URL}/${question.image}`}
+                                            alt="Question"
+                                            style={{ maxWidth: "100%", maxHeight: "100px" }}
+                                        />
+                                    </div>
+                                )}
+                                {question.programming == false &&
+                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
+                                        {question.optionB &&
+                                            <CardText>
+                                                <strong>Option A:</strong>{" "}
+                                                {question.aimage ? (
+                                                    <img
+                                                        src={`${API_URL}/${question.optionA}`}
+                                                        alt="Option A"
+                                                        style={{ maxWidth: "50px", maxHeight: "50px" }}
+                                                    />
+                                                ) : (
+                                                    question.optionA
+                                                )}
+                                            </CardText>
+                                        }
+                                        {question.optionB &&
+                                            <CardText>
+                                                <strong>Option B:</strong>{" "}
+                                                {question.bimage ? (
+                                                    <img
+                                                        src={`${API_URL}/${question.optionB}`}
+                                                        alt="Option B"
+                                                        style={{ maxWidth: "50px", maxHeight: "50px" }}
+                                                    />
+                                                ) : (
+                                                    question.optionB
+                                                )}
+                                            </CardText>
+                                        }
+                                        {question.optionC &&
+                                            <CardText>
+                                                <strong>Option C:</strong>{" "}
+                                                {question.cimage ? (
+                                                    <img
+                                                        src={`${API_URL}/${question.optionC}`}
+                                                        alt="Option C"
+                                                        style={{ maxWidth: "50px", maxHeight: "50px" }}
+                                                    />
+                                                ) : (
+                                                    question.optionC
+                                                )}
+                                            </CardText>
+                                        }
+                                        {question.optionD &&
+                                            <CardText>
+                                                <strong>Option D:</strong>{" "}
+                                                {question.dimage ? (
+                                                    <img
+                                                        src={`${API_URL}/${question.optionD}`}
+                                                        alt="Option D"
+                                                        style={{ maxWidth: "50px", maxHeight: "50px" }}
+                                                    />
+                                                ) : (
+                                                    question.optionD
+                                                )}
+                                            </CardText>
+                                        }
+                                    </div>
+                                }
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                        marginBottom: "10px",
+                                        flexWrap: "nowrap",
+                                        overflow: "hidden",
+                                    }}
+                                >
+                                    <CardText style={{ flex: "1 1 auto", whiteSpace: "normal", wordWrap: "break-word" }}>
+                                        <strong>Correct Answer:</strong>
+                                        <div
+                                            style={{
+                                                whiteSpace: 'pre-wrap',
+                                                wordBreak: 'break-word',
+                                            }}
+                                            dangerouslySetInnerHTML={{ __html: question.correctAnswer || "Not answered" }}
+                                        />
+                                    </CardText>
+
+                                    <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "nowrap" }}>
+                                        <div style={{ marginRight: "10px" }}>
+                                            <strong>Category:</strong> {question.category?.name || "N/A"}&nbsp;
+                                        </div>
+                                        <div>
+                                            <strong>Difficulty:</strong> {question.difficulty?.name || "N/A"}&nbsp;
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <Button
+                                            color="primary"
+                                            size="sm"
+                                            style={{ marginRight: "5px" }}
+                                            onClick={() => openEditForm(question)}
+                                        >
+                                            Edit
+                                        </Button>&nbsp;
+                                        <Button color="danger" size="sm" onClick={() => deleteQuestion(question.id)}>
+                                            Delete
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardBody>
+                        </Card>
+                    ))
+                }
             </div>
 
             {/* Modal */}
@@ -376,6 +449,33 @@ const Question = () => {
                         {isEditing ? "Edit Question" : "Add Question"}
                     </div>
                     <div className="modal-body">
+                        {/* Question Type Toggle */}
+                        <div className="form-group">
+                            <label>Question Type:</label>
+                            <div className="d-flex">
+                                <label>
+                                    <input
+                                        type="radio"
+                                        name="isProgramming"
+                                        value="0"
+                                        checked={isProgramming == 0}
+                                        onChange={handleQuestionTypeChange}
+                                    />
+                                    MCQ
+                                </label>
+                                <label className="ml-4">
+                                    <input
+                                        type="radio"
+                                        name="isProgramming"
+                                        value="1"
+                                        checked={isProgramming == 1}
+                                        onChange={handleQuestionTypeChange}
+                                    />
+                                    Programming
+                                </label>
+                            </div>
+                        </div>
+
                         <form>
                             <div className="form-group">
                                 <label>Question:</label>
@@ -442,98 +542,87 @@ const Question = () => {
                                     ))}
                                 </select>
                             </div>
+                            {isProgramming == 0 && (
+                                <>
+                                    {["A", "B", "C", "D"].map((option) => (
+                                        <div key={option} className="form-group">
+                                            <div className="d-flex align-items-center">
+                                                <input
+                                                    type="checkbox"
+                                                    name={`is${option}Image`}
+                                                    checked={newQuestion[`is${option}Image`]}
+                                                    onChange={handleInputChange}
+                                                    className="mr-2"
+                                                />
+                                                <span> Option {option} is an Image</span>
+                                            </div>
 
-                            {["A", "B", "C", "D"].map((option) => (
-                                <div key={option} className="form-group">
-                                    <div className="d-flex align-items-center">
-                                        <input
-                                            type="checkbox"
-                                            name={`is${option}Image`}
-                                            checked={newQuestion[`is${option}Image`]}
-                                            onChange={handleInputChange}
-                                            className="mr-2"
-                                        />
-                                        <span> Option {option} is an Image</span>
+                                            {newQuestion[`is${option}Image`] ? (
+                                                <>
+                                                    <input
+                                                        type="file"
+                                                        className="form-control"
+                                                        name={`option${option}Image`}
+                                                        onChange={(e) => handleFileChange(e)}
+                                                    />
+                                                    <img
+                                                        src={
+                                                            newQuestion[`option${option}Image`] instanceof File
+                                                                ? URL.createObjectURL(newQuestion[`option${option}Image`])
+                                                                : newQuestion[`option${option}`]
+                                                                    ? `${API_URL}/${newQuestion[`option${option}`]}`
+                                                                    : null
+                                                        }
+                                                        alt="Question Preview"
+                                                        className="mt-2 img-thumbnail"
+                                                        width="150"
+                                                    />
+
+                                                </>
+                                            ) : (
+                                                <textarea
+                                                    className="form-control"
+                                                    name={`option${option}`}
+                                                    value={newQuestion[`option${option}`]}
+                                                    onChange={handleInputChange}
+                                                ></textarea>
+                                            )}
+                                        </div>
+                                    ))}
+                                </>
+                            )}
+                            {isProgramming == 1 && (
+                                <div className="form-group">
+                                    <label>Correct Answer:</label>
+                                    <ReactQuill
+                                        name="correctAnswer"
+                                        value={newQuestion.correctAnswer}
+                                        onChange={handleInputChange}
+                                        theme="snow"
+                                        placeholder="Write your code here..."
+                                    />
+                                </div>
+                            )}
+                            {isProgramming == 0 && (
+                                <div className="form-group">
+                                    <label>Correct Answer:</label>
+                                    <div>
+                                        {["A", "B", "C", "D"].map((option, index) => (
+                                            <label key={option}>
+                                                <input
+                                                    type="radio"
+                                                    name="correctAnswer"
+                                                    value={option}
+                                                    checked={newQuestion.correctAnswer === option}
+                                                    onChange={handleInputChange}
+                                                />
+                                                Option {option}
+                                            </label>
+                                        ))}
                                     </div>
-
-                                    {newQuestion[`is${option}Image`] ? (
-                                        <>
-                                            <input
-                                                type="file"
-                                                className="form-control"
-                                                name={`option${option}Image`}
-                                                onChange={(e) => handleFileChange(e)}
-                                            />
-                                            <img
-                                                src={
-                                                    newQuestion[`option${option}Image`] instanceof File
-                                                        ? URL.createObjectURL(newQuestion[`option${option}Image`])
-                                                        : newQuestion[`option${option}`]
-                                                            ? `${API_URL}/${newQuestion[`option${option}`]}`
-                                                            : null
-                                                }
-                                                alt="Question Preview"
-                                                className="mt-2 img-thumbnail"
-                                                width="150"
-                                            />
-
-                                        </>
-                                    ) : (
-                                        <textarea
-                                            className="form-control"
-                                            name={`option${option}`}
-                                            value={newQuestion[`option${option}`]}
-                                            onChange={handleInputChange}
-                                        ></textarea>
-                                    )}
                                 </div>
-                            ))}
+                            )}
 
-                            <div className="form-group">
-                                <label>Correct Answer:</label>
-                                <div>
-                                    <label>
-                                        <input
-                                            type="radio"
-                                            name="correctAnswer"
-                                            value={1}
-                                            checked={newQuestion.correctAnswer == 1}
-                                            onChange={handleInputChange}
-                                        />
-                                        Option A
-                                    </label>
-                                    <label>
-                                        <input
-                                            type="radio"
-                                            name="correctAnswer"
-                                            value={2}
-                                            checked={newQuestion.correctAnswer == 2}
-                                            onChange={handleInputChange}
-                                        />
-                                        Option B
-                                    </label>
-                                    <label>
-                                        <input
-                                            type="radio"
-                                            name="correctAnswer"
-                                            value={3}
-                                            checked={newQuestion.correctAnswer == 3}
-                                            onChange={handleInputChange}
-                                        />
-                                        Option C
-                                    </label>
-                                    <label>
-                                        <input
-                                            type="radio"
-                                            name="correctAnswer"
-                                            value={4}
-                                            checked={newQuestion.correctAnswer == 4}
-                                            onChange={handleInputChange}
-                                        />
-                                        Option D
-                                    </label>
-                                </div>
-                            </div>
                         </form>
                     </div>
                     <div className="modal-footer">

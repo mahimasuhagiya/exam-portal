@@ -3,7 +3,6 @@ package com.exam.controller;
 import com.exam.model.DifficultyLookup;
 import com.exam.service.DifficultyLookupService;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,12 +28,6 @@ public class DifficultyLookupController {
     public ResponseEntity<DifficultyLookup> createDifficuty(@RequestBody DifficultyLookup difficulty) {
     	DifficultyLookup savedDifficulty = defficultyLookupService.saveDifficulty(difficulty);
         return new ResponseEntity<>(savedDifficulty, HttpStatus.CREATED);
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<DifficultyLookup> getDifficultyById(@PathVariable Long id) {
-        Optional<DifficultyLookup> difficulty = defficultyLookupService.getDifficultyById(id);
-        return difficulty.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping

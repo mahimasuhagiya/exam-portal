@@ -1,7 +1,9 @@
 package com.exam.service;
 
 import com.exam.model.Question;
+import com.exam.repository.ExamQuestionRepository;
 import com.exam.repository.QuestionRepository;
+import com.exam.repository.QuestionsAttemptRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -19,18 +21,15 @@ import java.util.Optional;
 
 @Service
 public class QuestionService {
-
-    private final QuestionRepository questionRepository;
-
-    @Autowired
-    public QuestionService(QuestionRepository questionRepository) {
-        this.questionRepository = questionRepository;
-    }
-
+	@Autowired
+    private QuestionRepository questionRepository;
+	@Autowired
+    private ExamQuestionRepository examQuestionRepository;
+	@Autowired
+    private QuestionsAttemptRepository questionsAttemptRepository;
     public Resource getImage(Long id, String name) {
     	
        Path filePath = Paths.get("questions"+"/"+id+"/"+name);
-       System.out.println(filePath);
         try {
             Resource resource = new UrlResource(filePath.toUri());
             return resource;
@@ -97,11 +96,19 @@ public class QuestionService {
         return questionRepository.findAll();
     }
 
+    
+    public List<Question> getAllQuestionsByType(Boolean isProgramming) {
+        return questionRepository.findByIsProgramming(isProgramming);
+    }
+
     public Optional<Question> getQuestionById(Long id) {
         return questionRepository.findById(id);
     }
 
     public void deleteQuestion(Long id) {
+    	if(examQuestionRepository.findByQuestion_Id(id) != null) { 		
+    		throw new RuntimeException("Question is already used in exams. First remove this question from exam.");
+    	}
         questionRepository.deleteById(id);
     }
 
@@ -113,9 +120,10 @@ public class QuestionService {
             MultipartFile optionDImage) throws Exception {
 
         try {
+        	if(questionsAttemptRepository.findByQuestion_Id(question.getId()) != 0) { 		
+        		throw new RuntimeException("Question is used in exam which is alredy attempted by students so can not edit the question");
+        	}
         	
-System.out.println(question);
-            // Save question image
             if (questionImage != null && !questionImage.isEmpty()) {
             	question.setImage(saveFile(questionImage, question.getId(), "question"));
             }

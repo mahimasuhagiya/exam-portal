@@ -14,12 +14,12 @@ const StudentDashboard = () => {
     localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null;
   const [examsData, setExamsData] = useState([]);
   const token = localStorage.getItem("jwtToken");
-
+  const userId = localStorage.getItem("userId"); 
   // Fetch exams data
   const fetchExams = async () => {
     if (!token) return;
     try {
-      const response = await axios.get(`${API_URL}/exams/active`, {
+      const response = await axios.get(`${API_URL}/exams/active/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -53,7 +53,7 @@ const StudentDashboard = () => {
               <CardTitle tag="h5">
                 <i className="fas fa-exclamation-triangle" style={{ fontSize: "100px", color: "#ecaa44" }}></i>
               </CardTitle>
-              <p> No exam is currently active.</p>
+              <p> No exam found for you.</p>
             </CardBody>
           </Card>
           :

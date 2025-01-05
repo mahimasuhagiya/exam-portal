@@ -13,6 +13,9 @@ import Questions from './components/Questions';
 import Exams from './components/Exams';
 import StudentDashboard from './components/StudentDashboard';
 import ExamPage from './components/ExamPage';
+import ExamSubmit from './components/ExamSubmit';
+import ExamResult from './components/ExamResult';
+import Result from './components/Result';
 
 function App() {
   const isLoggedIn = localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null;
@@ -27,20 +30,23 @@ function App() {
           <Row>
             {isAdmin ?
               <Routes>
-                <Route path="/" element={<Home />} />
+                <Route path="/" element={isLoggedIn ?<Dashboard />:<Home /> } />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/colleges" element={<CollegePage />} />
                 <Route path="/difficulty" element={<Difficulty />} />
                 <Route path="/viewusers" element={<Student />} />
                 <Route path="/manageexams" element={<Exams />} />
                 <Route path="/questions" element={<Questions />} />
+                <Route path="/result" element={<Result />} />
+                <Route path="/examresult/:userId/:examId" element={<ExamResult />} />
                 <Route path="/question-categories" element={<QuestionCategories />} />
               </Routes>
               :
               <Routes>
-                <Route path="/" element={<Home />} />
+                <Route path="/" element={isLoggedIn?<StudentDashboard />:<Home />} />
                 <Route path="/student" element={<StudentDashboard />} />
                 <Route path="/exam" element={<ExamPage />} />
+                <Route path="/examsubmit" element={<ExamSubmit />} />
               </Routes>
             }
           </Row>

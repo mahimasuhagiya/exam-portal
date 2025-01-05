@@ -114,7 +114,7 @@ const Difficulty = () => {
             }
         };
 
-        showToastConfirmation("delete", "Difficulty Level", deleteCallback);
+        showToastConfirmation("delete", "Difficulty Level.", deleteCallback,"All the Questions and Exams with this difficulty level will get deleted.");
     };
 
     // Open Edit Form

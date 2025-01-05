@@ -14,11 +14,13 @@ import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
-@Data
+@Getter
+@Setter
 @AllArgsConstructor 
 @NoArgsConstructor 
 public class Question {
@@ -28,6 +30,7 @@ public class Question {
     @Lob
     private String question;
     private String image;
+    private boolean isProgramming;
     @Lob
     private String optionA;
     private boolean isAImage;
@@ -40,7 +43,8 @@ public class Question {
     @Lob
     private String optionD;
     private boolean isDImage;
-    private int correctAnswer;
+    @Lob
+    private String correctAnswer;
     @ManyToOne
     @JoinColumn(name = "difficulty_level_id")
     private DifficultyLookup difficulty;
@@ -53,9 +57,4 @@ public class Question {
     @JsonIgnore
     private List<ExamQuestion> examQuestions;
 
-    @OneToMany(mappedBy = "question", cascade = CascadeType.ALL)
-    @JsonIgnore
-    private List<questionsAttempt> attempts;
-
-	
 }

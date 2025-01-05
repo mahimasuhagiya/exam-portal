@@ -5,33 +5,32 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
-@Data
+@Getter
+@Setter
 @AllArgsConstructor 
 @NoArgsConstructor 
-public class questionsAttempt {
+public class QuestionsAttempt {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "student_id", referencedColumnName = "id")
-    private User student;
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
+    private User user;
 
     @ManyToOne
-    @JoinColumn(name = "exam_id", referencedColumnName = "id")
-    private Exam exam;
+	@JoinColumn(name = "exam_question_id", referencedColumnName = "id")
+	private ExamQuestion exam_question;
+    
+    @Lob
+    private String user_answer;
 
-    @ManyToOne
-    @JoinColumn(name = "question_id", referencedColumnName = "id")//, insertable = false, updatable = false)
-    private Question question;
-
-    private int selected_option;
-
-	
 }

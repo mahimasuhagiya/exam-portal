@@ -90,11 +90,12 @@ const QuestionCategories = () => {
 
                 toggleModal();
             } catch (error) {
-                toast.error("Error saving category. Please try again.");
+                const errorMessage = error.response?.data?.message || error.message || "An unexpected error occurred.";
+                toast.error(errorMessage);
             }
         };
 
-        showToastConfirmation(isEditing ? "update" : "add", "Category",saveCallback);
+        showToastConfirmation(isEditing ? "update" : "add", "Category", saveCallback);
     };
 
     // Delete Category
@@ -113,8 +114,7 @@ const QuestionCategories = () => {
                 toast.error("Error deleting category. Please try again.");
             }
         };
-
-        showToastConfirmation("delete", "Category", deleteCallback);
+        showToastConfirmation("delete", "Category", deleteCallback, "All question of this category will be deleted.");
     };
 
     // Open Edit Form

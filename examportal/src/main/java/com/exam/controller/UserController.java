@@ -1,5 +1,6 @@
 package com.exam.controller;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -43,12 +44,13 @@ public class UserController {
 
   // @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_EXAMINER')")
     @GetMapping()
-    public ResponseEntity<?> getAllUsers() {
-        try {
-            return ResponseEntity.ok(userService.getAllUsers());
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public List<User> getAllUsers() {
+            return userService.getAllUsers();
+    }
+    
+    @GetMapping("/student_count")
+    public Long countStudents() {
+        return userService.countStudents();
     }
    
 	@GetMapping("/{id}")
@@ -58,22 +60,20 @@ public class UserController {
 	}
 	
 	@GetMapping("role/{role}")
-	public ResponseEntity<?> getAllUsersByRole(@PathVariable String role) {
-		try {
-            return ResponseEntity.ok(userService.getAllUsersByRole(role));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+	public List<User> getAllUsersByRole(@PathVariable String role) {
+		return userService.getAllUsersByRole(role);
 	}
 	
 	@PutMapping
-	public ResponseEntity<User> updateUser( @RequestBody User user) {
+	public ResponseEntity<?> updateUser( @RequestBody User user) {
 		try {
 			User updatedUser = userService.updateUser( user);
 			return ResponseEntity.ok(updatedUser);
-		} catch (RuntimeException e) {
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-		}
+		} catch (Exception ex) {
+	        return ResponseEntity
+	                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                .body(Map.of("message", "Error registering user: " + ex.getMessage()));
+	    }
 	}
 
 

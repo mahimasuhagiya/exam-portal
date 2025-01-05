@@ -7,6 +7,7 @@ import { Modal } from "reactstrap";
 import showToastConfirmation from "./toast";
 import "../css/styles.css";
 
+
 const Exams = () => {
     const [examsData, setExamsData] = useState([]);
     const [questionData, setQuestionData] = useState([]);
@@ -18,12 +19,14 @@ const Exams = () => {
     const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [selectedExam, setSelectedExam] = useState(null);
+    const [programming, setProgramming] = useState(false);
     const [newExam, setNewExam] = useState({
         title: "",
         difficulty: { id: "" },
         durationMinutes: "",
         numberOfQuestions: "",
         passingMarks: "",
+        programming: false,
         active: true,
     });
     const token = localStorage.getItem("jwtToken");
@@ -57,9 +60,9 @@ const Exams = () => {
             toast.error("Error fetching difficulties data!");
         }
     };
-    const fetchQuestions = async () => {
+    const fetchQuestions = async (flag) => {
         try {
-            const response = await axios.get(`${API_URL}/questions`, {
+            const response = await axios.get(`${API_URL}/questions/programming/${flag}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     "Content-Type": "application/json",
@@ -86,7 +89,6 @@ const Exams = () => {
 
     useEffect(() => {
 
-        fetchQuestions();
         fetchExams();
         fetchDifficulties();
     }, [token]);
@@ -101,6 +103,7 @@ const Exams = () => {
                 durationMinutes: "",
                 numberOfQuestions: "",
                 passingMarks: "",
+                programming: false,
                 active: true,
             });
             setIsEditing(false);
@@ -110,15 +113,19 @@ const Exams = () => {
         setIsQuestionModalOpen(!isQuestionModalOpen);
         if (flag == true) {
             setSelectedExam(exam);
+            setProgramming(exam.programming);
             fetchExamQuestions(exam.id);
+            fetchQuestions(exam.programming);
         }
     };
 
     // Handle input change
     const handleInputChange = (e) => {
-        const { name, value } = e.target;
+        const { name, value, type, checked } = e.target;
         if (name === "difficulty") {
             setNewExam((prev) => ({ ...prev, difficulty: { id: value } }));
+        } else if (type === "checkbox") {
+            setNewExam((prev) => ({ ...prev, [name]: checked }));
         } else {
             setNewExam((prev) => ({ ...prev, [name]: value }));
         }
@@ -130,7 +137,7 @@ const Exams = () => {
             toast.warn("Please fill out all required fields.");
             return;
         }
-        if (newExam.passingMarks > newExam.numberOfQuestions || newExam.passingMarks < 0) {
+        if (newExam.programming == false && newExam.passingMarks > newExam.numberOfQuestions || newExam.passingMarks < 0) {
             toast.warn("Passing marks should greter than 0 and equal to / less than number of questions.");
             return;
         }
@@ -230,8 +237,8 @@ const Exams = () => {
                 });
             }
         } catch (error) {
-            toast.error("Failed to update question. Please try again.");
-            fetchExamQuestions(selectedExam.id);
+            const errorMessage = error.response?.data?.message || error.message || "An unexpected error occurred.";
+            toast.error(errorMessage);
         }
     };
 
@@ -252,7 +259,7 @@ const Exams = () => {
             }
         };
 
-        showToastConfirmation("delete", "Exam", deleteCallback);
+        showToastConfirmation("delete", "Exam.", deleteCallback, "All results of this exam will geet deleted.");
     };
 
     // Open Edit Form
@@ -266,6 +273,7 @@ const Exams = () => {
             durationMinutes: exam.durationMinutes,
             numberOfQuestions: exam.numberOfQuestions,
             passingMarks: exam.passingMarks,
+            programming: exam.programming,
             active: exam.active,
         });
         toggleModal();
@@ -275,7 +283,7 @@ const Exams = () => {
     const filteredData = Array.isArray(examsData) ? examsData.filter((exam) =>
         exam.title.toLowerCase().includes(searchText.toLowerCase()) ||
         exam.difficulty?.name.toLowerCase().includes(searchText.toLowerCase())
-    ) : [];
+    ).sort((a, b) => b.id - a.id) : [];
 
     // Columns for DataGrid
     const columns = [
@@ -290,6 +298,15 @@ const Exams = () => {
         { field: "durationMinutes", headerName: "Duration (mins)", flex: 1 },
         { field: "numberOfQuestions", headerName: "Number of Questions", flex: 1 },
         { field: "passingMarks", headerName: "Passing Marks", flex: 1 },
+        {
+            field: "programming",
+            headerName: "Type",
+            flex: 1,
+            renderCell: (params) => (<div>
+                {params.row.programming ? "Programming" : "MCQ"}
+            </div>
+            )
+        },
         {
             field: "isActive",
             headerName: "Status",
@@ -349,7 +366,7 @@ const Exams = () => {
         {
             field: "select",
             headerName: "Select",
-            width: 100,
+            width: 50,
             renderCell: (params) => (
                 <input
                     type="checkbox"
@@ -358,7 +375,7 @@ const Exams = () => {
                 />
             ),
         },
-        { field: "id", headerName: "ID", width: 100 },
+        { field: "id", headerName: "ID", width: 50 },
         { field: "question", headerName: "Question", flex: 1 },
         {
             field: "image",
@@ -368,39 +385,55 @@ const Exams = () => {
                 params.value ? <img src={`${API_URL}/${params.value}`} alt="Question" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : "N/A"
             )
         },
+
+
+    ];
+    if (programming == false) {
+        QuestionColumns.push(
+            {
+                field: "optionA",
+                headerName: "Option A",
+                flex: 1,
+                renderCell: (params) => (
+                    params.row.aimage ? <img src={`${API_URL}/${params.value}`} alt="Option A" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"
+                )
+            },
+            {
+                field: "optionB",
+                headerName: "Option B",
+                flex: 1,
+                renderCell: (params) => (
+                    params.row.bimage ? <img src={`${API_URL}/${params.value}`} alt="Option B" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"
+                )
+            },
+            {
+                field: "optionC",
+                headerName: "Option C",
+                flex: 1,
+                renderCell: (params) => (
+                    params.row.cimage ? <img src={`${API_URL}/${params.value}`} alt="Option C" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"
+                )
+            },
+            {
+                field: "optionD",
+                headerName: "Option D",
+                flex: 1,
+                renderCell: (params) => (
+                    params.row.dimage ? <img src={`${API_URL}/${params.value}`} alt="Option D" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"
+                )
+            },
+        )
+    }
+    QuestionColumns.push(
         {
-            field: "optionA",
-            headerName: "Option A",
+            field: "correctAnswer",
+            headerName: "Correct Answer",
             flex: 1,
-            renderCell: (params) => (
-                params.row.aimage ? <img src={`${API_URL}/${params.value}`} alt="Option A" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"
-            )
+            renderCell: (params) => <div
+                style={{ overflow: "hidden", textOverflow: "ellipsis", }}
+                dangerouslySetInnerHTML={{ __html: params.value }}
+            />
         },
-        {
-            field: "optionB",
-            headerName: "Option B",
-            flex: 1,
-            renderCell: (params) => (
-                params.row.bimage ? <img src={`${API_URL}/${params.value}`} alt="Option B" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"
-            )
-        },
-        {
-            field: "optionC",
-            headerName: "Option C",
-            flex: 1,
-            renderCell: (params) => (
-                params.row.cimage ? <img src={`${API_URL}/${params.value}`} alt="Option C" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"
-            )
-        },
-        {
-            field: "optionD",
-            headerName: "Option D",
-            flex: 1,
-            renderCell: (params) => (
-                params.row.dimage ? <img src={`${API_URL}/${params.value}`} alt="Option D" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"
-            )
-        },
-        { field: "correctAnswer", headerName: "Correct Answer", flex: 1 },
         {
             field: "difficulty",
             headerName: "Difficulty",
@@ -413,8 +446,7 @@ const Exams = () => {
             flex: 1,
             renderCell: (params) => params.value?.name || "N/A"
         },
-    ];
-
+    )
 
     return (
         <div>
@@ -461,6 +493,7 @@ const Exams = () => {
                                     onChange={handleInputChange}
                                 />
                             </div>
+
                             <div className="form-group">
                                 <label>Difficulty:</label>
                                 <select
@@ -498,6 +531,16 @@ const Exams = () => {
                                 />
                             </div>
                             <div className="form-group">
+                                <label>Is programming exam ?:</label>
+                                <input
+                                    type="checkbox"
+                                    name="programming"
+                                    checked={newExam.programming}
+                                    onChange={handleInputChange}
+                                    className="mr-2"
+                                />
+                            </div>
+                            <div className="form-group">
                                 <label>Passing Marks:</label>
                                 <input
                                     type="number"
@@ -520,7 +563,7 @@ const Exams = () => {
                 </div>
             </Modal>
 
-            <Modal isOpen={isQuestionModalOpen} toggle={toggleQuestionModal}>
+            <Modal isOpen={isQuestionModalOpen} toggle={toggleQuestionModal} className="modal-lg">
                 <div className="modal-content">
                     <div className="modal-header">Add/Remove Question</div>
                     <div className="modal-body">
@@ -539,6 +582,12 @@ const Exams = () => {
                                 columns={QuestionColumns}
                                 pageSize={10}
                                 rowsPerPageOptions={[5, 10, 15]}
+                                getRowHeight={(params) => {
+                                    const text = params.value || "";
+                                    const lineHeight = 20;
+                                    const numLines = Math.ceil(text.length / 50);
+                                    return Math.max(50, lineHeight * numLines);
+                                }}
                             />
                         </div>
                     </div>

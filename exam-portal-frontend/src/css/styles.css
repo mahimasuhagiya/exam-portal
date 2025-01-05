@@ -105,11 +105,13 @@ button:disabled {
 }
 
 .modal-content {
+  box-sizing: unset;
   background-color: white;
   padding: 20px;
   border-radius: 8px;
-  max-width: 500px;
+  max-width: 800px;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .modal-header {
