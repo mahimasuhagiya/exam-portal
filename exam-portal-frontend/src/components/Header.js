@@ -6,11 +6,12 @@ import '../css/header.css';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import "../css/sidebar.css";
+import { getWithExpiry } from "../services/authService";
 
 const Header = () => {
   const navigate = useNavigate();
-  const isLoggedIn = localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null;
-  const isAdmin = localStorage.getItem("role") == "EXAMINER" || localStorage.getItem("role") == "ADMIN";
+  const isLoggedIn = getWithExpiry("userId") !== "null" && getWithExpiry("userId") !== null;
+  const isAdmin = getWithExpiry("role") == "EXAMINER" || getWithExpiry("role") == "ADMIN";
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("userId");

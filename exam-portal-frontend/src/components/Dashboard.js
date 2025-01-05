@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, CardBody, CardTitle,CardText } from 'reactstrap';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import API_URL from '../services/authService';
+import API_URL, { getWithExpiry } from '../services/authService';
 import { toast, ToastContainer } from 'react-toastify';
 const DashboardCard = ({ title, count, bgColor, textColor, icon }) => {
   return (
@@ -30,8 +30,8 @@ const DashboardCard = ({ title, count, bgColor, textColor, icon }) => {
 };
 
 const Dashboard = () => {
-  const isLoggedIn = localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null;
-  const token = localStorage.getItem('jwtToken');
+  const isLoggedIn = getWithExpiry("userId") !== "null" && getWithExpiry("userId") !== null;
+  const token = getWithExpiry('jwtToken');;
   const [pendingResultsCount, setPendingResultsCount] = useState(0);
   const [examsCount, setExamsCount] = useState(0);
   const [activeExamsCount, setActiveExamsCount] = useState(0);

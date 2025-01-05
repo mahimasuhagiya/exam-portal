@@ -12,7 +12,9 @@ import { Marginer } from "../marginer";
 import { AccountContext } from './accountContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import API_URL from '../../services/authService';
+import API_URL, { setWithExpiry } from '../../services/authService';
+
+
 
 export function LoginForm(props) {
 
@@ -37,9 +39,11 @@ export function LoginForm(props) {
             const  token  = response.data.Token;
             const  userId  = response.data.userId;
             const  role  = response.data.role;
-            localStorage.setItem('jwtToken', token);
-            localStorage.setItem('userId', userId);
-            localStorage.setItem('role', role);
+            const ttl = 30 * 24 * 60 * 60 * 1000;
+
+            setWithExpiry('jwtToken', token, ttl);
+            setWithExpiry('userId', userId, ttl);
+            setWithExpiry('role', role, ttl);
             console.log(token);
             if(role=="ADMIN" || role=="EXAMINER")
                window.location.href = '/dashboard';
@@ -73,12 +77,12 @@ export function LoginForm(props) {
         <SubmitButton type="submit" >Signin</SubmitButton>
         <Marginer direction="vertical" margin="1.6em" />
       </FormContainer>
-      <LineText>
+      {/* <LineText>
         Forgot password?{" "}
         <BoldLink onClick={switchToForgotpassword} href="#">
           Click here
         </BoldLink>
-      </LineText>
+      </LineText> */}
       {error && <p style={{ color: "red" }}>{error}</p>}
     </BoxContainer>
   );

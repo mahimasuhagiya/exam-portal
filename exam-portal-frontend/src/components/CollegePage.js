@@ -5,7 +5,7 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "../css/styles.css";
-import API_URL from "./../services/authService";
+import API_URL, { getWithExpiry } from "./../services/authService";
 import showToastConfirmation from "./toast";
 
 const CollegePage = () => {
@@ -15,7 +15,7 @@ const CollegePage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedCollege, setSelectedCollege] = useState(null);
   const [newCollege, setNewCollege] = useState({ name: "", address: "" });
-  const token = localStorage.getItem("jwtToken");
+  const token = getWithExpiry('jwtToken');;
 
   // Fetch college data
   useEffect(() => {

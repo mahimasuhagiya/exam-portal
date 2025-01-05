@@ -1,7 +1,14 @@
 import React from "react";
-import { Card, CardBody, CardTitle, CardText } from "reactstrap";
+import { Card, CardBody, CardTitle, Button } from "reactstrap";
+import { useLocation, useNavigate } from "react-router-dom";
 
-const ExamSubmit = ({ studentName, examName, totalMarks, submissionTime }) => {
+const ExamSubmit = () => {
+  const navigate = useNavigate();
+const doneSuspiciousActivity = localStorage.getItem("doneSuspiciousActivity") === "true";
+
+  const handleBackToHome = () => {
+    navigate('/student'); // Navigate to the home page
+  };
   return (
     <div
       style={{
@@ -31,49 +38,16 @@ const ExamSubmit = ({ studentName, examName, totalMarks, submissionTime }) => {
               fontWeight: "bold",
             }}
           >
-            Exam Submitted Successfully! 🎉
+            {doneSuspiciousActivity === true ?<> <i className="fas fa-exclamation-triangle" style={{ fontSize: "100px", color: "#ecaa44" }}></i><p>You have tried some suspicious activity, due to that the exam is submitted.</p></>
+              :<> <i className="fas fa-check-circle " style={{ fontSize: "100px", color: "#67AF6F" }}></i><p> Exam Submitted Successfully! 🎉</p></>}
+            
           </CardTitle>
-          <CardText
-            style={{
-              color: "#555555",
-              marginBottom: "20px",
-              textAlign: "center",
-              fontSize: "18px",
-            }}
-          >
-            Congratulations, <strong>{studentName}</strong>!
-          </CardText>
-          <CardText
-            style={{
-              color: "#777777",
-              fontSize: "16px",
-              marginBottom: "10px",
-            }}
-          >
-            <strong>Exam Name:</strong> {examName}
-          </CardText>
-          <CardText
-            style={{
-              color: "#777777",
-              fontSize: "16px",
-              marginBottom: "10px",
-            }}
-          >
-            <strong>Total Marks:</strong> {totalMarks}
-          </CardText>
-          <CardText
-            style={{
-              color: "#777777",
-              fontSize: "16px",
-              marginBottom: "10px",
-            }}
-          >
-            <strong>Submission Time:</strong> {submissionTime}
-          </CardText>
+          <Button color="primary" onClick={handleBackToHome} style={{ width: "100%" }}>
+            Back to Home
+          </Button>
         </CardBody>
       </Card>
     </div>
   );
 };
-
 export default ExamSubmit;

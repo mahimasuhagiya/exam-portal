@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import API_URL from "../services/authService";
+import API_URL, { getWithExpiry } from "../services/authService";
 import { toast, ToastContainer } from "react-toastify";
 import { DataGrid } from "@mui/x-data-grid";
 import { Modal } from "reactstrap";
@@ -29,7 +29,7 @@ const Exams = () => {
         programming: false,
         active: true,
     });
-    const token = localStorage.getItem("jwtToken");
+    const token = getWithExpiry("jwtToken");
 
     // Fetch exams data
     const fetchExams = async () => {

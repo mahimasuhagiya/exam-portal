@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Card, CardBody, CardTitle, Button, Form, FormGroup, Label, Input } from "reactstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
-import API_URL from "../services/authService";
+import API_URL, { getWithExpiry } from "../services/authService";
 import { toast, ToastContainer } from "react-toastify";
 import showToastConfirmation from "./toast";
 
@@ -10,11 +10,11 @@ const ExamResult = () => {
   const navigate = useNavigate();
   const [resultDetails, setResultDetails] = useState({});
   const [questions, setQuestions] = useState([]);
-  const token = localStorage.getItem("jwtToken");
+  const token = getWithExpiry("jwtToken");
   const { examId, userId } = useParams();
   const decodedExamId = examId ? atob(examId) : null;
   const decodedUserId = userId ? atob(userId) : null;
-  const adminId = localStorage.getItem("userId");
+  const adminId = getWithExpiry("userId");
   const [obtainedMarks, setObtainedMarks] = useState(0);
   useEffect(() => {
     const fetchData = async () => {

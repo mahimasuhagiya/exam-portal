@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { FaBars, FaTimes } from "react-icons/fa";
 import "../css/sidebar.css";
+import { getWithExpiry } from "../services/authService";
 
 const Sidebar = () => {
-  const isLoggedIn = localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null;
+  const isLoggedIn = getWithExpiry("userId") !== "null" && getWithExpiry("userId") !== null;
 
   const [isOpen, setIsOpen] = useState(false);
 

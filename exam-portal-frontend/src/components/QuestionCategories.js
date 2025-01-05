@@ -1,6 +1,6 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
-import API_URL from "../services/authService";
+import API_URL, { getWithExpiry } from "../services/authService";
 import { toast, ToastContainer } from "react-toastify";
 import { DataGrid } from "@mui/x-data-grid";
 import { Modal } from "reactstrap";
@@ -14,7 +14,7 @@ const QuestionCategories = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [newCategory, setNewCategory] = useState({ name: "" });
-    const token = localStorage.getItem("jwtToken");
+    const token = getWithExpiry("jwtToken");
 
     // Fetch question category data
     useEffect(() => {

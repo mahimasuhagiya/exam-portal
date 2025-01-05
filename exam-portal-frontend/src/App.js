@@ -16,10 +16,11 @@ import ExamPage from './components/ExamPage';
 import ExamSubmit from './components/ExamSubmit';
 import ExamResult from './components/ExamResult';
 import Result from './components/Result';
+import { getWithExpiry } from './services/authService';
 
 function App() {
-  const isLoggedIn = localStorage.getItem("userId") !== "null" && localStorage.getItem("userId") !== null;
-  const isAdmin = ["EXAMINER", "ADMIN"].includes(localStorage.getItem("role"));
+  const isLoggedIn = getWithExpiry("userId") !== "null" && getWithExpiry("userId") !== null;
+  const isAdmin = ["EXAMINER", "ADMIN"].includes(getWithExpiry("role"));
 
   return (
     <Router>

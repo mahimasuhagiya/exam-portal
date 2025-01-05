@@ -2,23 +2,26 @@ import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, CardBody, CardTitle, Button, Form, FormGroup, Label, Input } from 'reactstrap';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import API_URL from '../services/authService';
+import API_URL, { getWithExpiry, setWithExpiry } from '../services/authService';
 import { toast, ToastContainer } from 'react-toastify';
 import showToastConfirmation from './toast';
 import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css'; // Import styles for react-quill
+import 'react-quill/dist/quill.snow.css';
 
 const ExamPage = () => {
   const navigate = useNavigate();
   const [questions, setQuestions] = useState([]);
-  const [answers, setAnswers] = useState({});
+  const [answers, setAnswers] = useState(JSON.parse(localStorage.getItem('answers')) || {});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(60 * localStorage.getItem("examDuration") || 0);
-  const examId = localStorage.getItem("examId");
-  const token = localStorage.getItem('jwtToken');
-  const userId = localStorage.getItem("userId"); 
-
+  const [timeLeft, setTimeLeft] = useState(Number(localStorage.getItem('timeLeft')) || 60 * getWithExpiry('examDuration') || 0);
+  const examId = getWithExpiry('examId');
+  const token = getWithExpiry('jwtToken');
+  const userId = getWithExpiry("userId");
   useEffect(() => {
+
+    // Prevent text selection during the exam
+    document.body.style.userSelect = 'none';
+
     const fetchQuestions = async () => {
       if (!token) return;
       try {
@@ -38,22 +41,33 @@ const ExamPage = () => {
     fetchQuestions();
   }, [token]);
 
+  // Start timer from stored time on reload
   useEffect(() => {
+
     if (timeLeft <= 0) {
-      handleSubmit(); // Automatically submit when timer runs out
+      saveCallback(); // Automatically submit when timer runs out
       return;
     }
 
     const timerId = setInterval(() => {
-      setTimeLeft((prevTime) => prevTime - 1);
+      setTimeLeft((prevTime) => {
+        const newTime = prevTime - 1;
+        localStorage.setItem('timeLeft', newTime); // Store updated timeLeft in localStorage
+        return newTime;
+      });
     }, 1000);
 
     return () => clearInterval(timerId); // Cleanup timer on component unmount
   }, [timeLeft]);
 
+  // Save answers in localStorage
+  useEffect(() => {
+    localStorage.setItem('answers', JSON.stringify(answers)); // Store answers
+  }, [answers]);
+
   const handleAnswerChange = (questionId, option) => {
-    const optionValue = option ;
-  
+    const optionValue = option;
+
     setAnswers({
       ...answers,
       [questionId]: optionValue,
@@ -67,33 +81,41 @@ const ExamPage = () => {
     });
   };
 
+  const saveCallback = async () => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/questions_attempt/${examId}/${userId}`,
+        answers,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      setWithExpiry('examId', 0);
+      setWithExpiry('examDuration', 0);
+
+      // Navigate after successful submission
+      navigate('/examsubmit');
+    } catch (error) {
+      console.error('Submission error:', error.response?.data || error.message);
+      toast.error("Error submitting exam. Please try again.");
+    }
+  };
+
+
   const handleSubmit = async () => {
-    const saveCallback = async () => {
-      try {
-        console.log(answers);
-        const response = await axios.post(
-         `${API_URL}/questions_attempt/${examId}/${userId}`,
-          answers ,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-       
-        localStorage.setItem('examId', 0);
-        localStorage.setItem('examDuration', 0);
-  
-        // Navigate after successful submission
-        navigate('/student');
-      } catch (error) {
-        console.error('Submission error:', error.response?.data || error.message);
-        toast.error("Error submitting exam. Please try again.");
-      }
-    };
-  
     showToastConfirmation("submit", "exam", saveCallback);
+  };
+
+  const SubmitExam = async () => {
+   toast.warn("you changed tabs or windows submitting the exam...");
+   localStorage.setItem("doneSuspiciousActivity",true);
+   setTimeout(() => {
+    saveCallback(); // Automatically submit 
+  }, 1000)
   };
 
   const handleNextQuestion = () => {
@@ -121,6 +143,23 @@ const ExamPage = () => {
     const secs = seconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // Handle tab/window switching
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // If the user switches to a different tab or window
+        // Trigger some action, like auto-submitting the exam
+        // Or alerting the user that they are leaving the exam
+        SubmitExam();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   return (
     <Container>
