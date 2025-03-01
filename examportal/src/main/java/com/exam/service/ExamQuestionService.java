@@ -70,6 +70,7 @@ public class ExamQuestionService {
 		 if(examQuestion.getExam().isActive()) { 		
      		throw new RuntimeException("Exam is active so question can not be removed. First deactivate the exam.");
      	}
-		examQuestionRepository.deleteById(examQuestion.getId());
+		 ExamQuestion eq = examQuestionRepository.findByExam_IdAndQuestion_Id(examQuestion.getExam().getId(),examQuestion.getQuestion().getId());
+		examQuestionRepository.deleteById(eq.getId());
 	}
 }
