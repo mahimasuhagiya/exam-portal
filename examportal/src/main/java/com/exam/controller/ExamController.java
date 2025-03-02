@@ -82,6 +82,16 @@ public class ExamController {
 					.body(Map.of("message", "Error creating exam: " + ex.getMessage()));
 		}
 	}
+	@PostMapping("/CreateWithQuestions")
+	public ResponseEntity<?> createExamWithQuestions(@RequestBody Exam exam) {
+		try {
+			Exam createdExam = examService.createExamWithQuestions(exam);
+			return ResponseEntity.status(HttpStatus.CREATED).body(createdExam);
+		} catch (Exception ex) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body(Map.of("message", "Error creating exam: " + ex.getMessage()));
+		}
+	}
 
 	@PutMapping
 	public ResponseEntity<?> updateExam(@RequestBody Exam examDetails) {

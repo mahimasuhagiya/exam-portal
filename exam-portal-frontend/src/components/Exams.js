@@ -177,6 +177,38 @@ const Exams = () => {
 
         showToastConfirmation(isEditing ? "update" : "add", "Exam", saveCallback);
     };
+    // Save exam (Add/Edit)
+    const saveExamWithQuestion = async () => {
+        if (!newExam.title || !newExam.difficulty.id || !newExam.durationMinutes || !newExam.numberOfQuestions || !newExam.passingMarks) {
+            toast.warn("Please fill out all required fields.");
+            return;
+        }
+        if (newExam.programming == false && newExam.passingMarks > newExam.numberOfQuestions || newExam.passingMarks < 0) {
+            toast.warn("Passing marks should greter than 0 and equal to / less than number of questions.");
+            return;
+        }
+
+        const saveCallback = async () => {
+            try {
+                    const response = await axios.post(`${API_URL}/exams/CreateWithQuestions`, newExam, {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            "Content-Type": "application/json",
+                        },
+                    });
+                    setExamsData([...examsData, response.data]);
+                    toast.success("Exam added successfully!");
+                
+
+                toggleModal();
+            } catch (error) {
+                const errorMessage = error.response?.data?.message || error.message || "An unexpected error occurred.";
+                toast.error(errorMessage);
+            }
+        };
+
+        showToastConfirmation("add", "Exam with random questions", saveCallback);
+    };
 
     const toggleExamStatus = (id) => {
         const exam = examsData.find((e) => e.id === id);
@@ -559,6 +591,11 @@ const Exams = () => {
                         <button className="btn btn-primary" onClick={saveExam}>
                             {isEditing ? "Edit" : "Add"}
                         </button>
+                        {!isEditing ? 
+                        <button className="btn btn-primary" onClick={saveExamWithQuestion}>
+                            Add with random questions
+                        </button>:<></>
+}
                     </div>
                 </div>
             </Modal>
