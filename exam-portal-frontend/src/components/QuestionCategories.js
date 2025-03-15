@@ -6,6 +6,12 @@ import { DataGrid } from "@mui/x-data-grid";
 import { Modal } from "reactstrap";
 import showToastConfirmation from "./toast";
 import "../css/styles.css";
+import Papa from "papaparse";
+import { Dropdown, DropdownToggle, DropdownMenu, DropdownItem } from 'reactstrap';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faFileCsv, faFileExcel, faFilePdf } from "@fortawesome/free-solid-svg-icons";
+import { jsPDF } from "jspdf";
+import * as XLSX from "xlsx";
 
 const QuestionCategories = () => {
     const [CategoryData, setCategoryData] = useState([]);
@@ -14,6 +20,7 @@ const QuestionCategories = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [newCategory, setNewCategory] = useState({ name: "" });
+    const [errors, setErrors] = useState({}); // State for validation errors
     const token = getWithExpiry("jwtToken");
 
     // Fetch question category data
@@ -40,8 +47,9 @@ const QuestionCategories = () => {
     const toggleModal = (flag) => {
         setIsModalOpen(!isModalOpen);
         if (flag) {
-            setNewCategory({ name: "" });  // Reset when opening
-            setIsEditing(false); // Reset editing mode when opening the modal        
+            setNewCategory({ name: "" }); // Reset when opening
+            setIsEditing(false); // Reset editing mode when opening the modal
+            setErrors({}); // Reset validation errors
         }
     };
 
@@ -49,14 +57,21 @@ const QuestionCategories = () => {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setNewCategory((prev) => ({ ...prev, [name]: value }));
+        // Clear the error for the field when it changes
+        setErrors((prev) => ({ ...prev, [name]: "" }));
+    };
+
+    // Validate form fields
+    const validateForm = () => {
+        const newErrors = {};
+        if (!newCategory.name) newErrors.name = "Name is required";
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
     // Save category (Add/Edit)
     const saveCategory = async () => {
-        if (!newCategory.name) {
-            toast.warn("Please fill out all fields.", { position: "top-center" });
-            return;
-        }
+        if (!validateForm()) return; // Stop if validation fails
 
         const saveCallback = async () => {
             try {
@@ -114,7 +129,7 @@ const QuestionCategories = () => {
                 toast.error("Error deleting category. Please try again.");
             }
         };
-        showToastConfirmation("delete", "Category", deleteCallback, "All question of this category will be deleted.");
+        showToastConfirmation("delete", "Category", deleteCallback, "All questions of this category will be deleted.");
     };
 
     // Open Edit Form
@@ -125,12 +140,79 @@ const QuestionCategories = () => {
         toggleModal(); // Open the modal
     };
 
-
     // Filter data based on search
     const filteredData = CategoryData.filter(
         (category) => category.name.toLowerCase().includes(searchText.toLowerCase())
     ).sort((a, b) => b.id - a.id);
 
+    const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+    const toggleExportDropdown = () => setExportDropdownOpen(prev => !prev);
+
+    const exportToCSV = () => {
+        try{
+        if (CategoryData.length === 0) {
+            toast.warn("No data available to export.");
+            return;
+        }
+        const csvData = CategoryData.map((category) => ({
+            ID: category.id,
+            Name: category.name,
+        }));
+        const csv = Papa.unparse(csvData);
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "question_categories.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success("CSV file downloaded successfully!");
+         } catch (error) {
+                toast.error("Error exporting CSV!");
+              }
+    };
+
+    const exportToExcel = () => {
+        try {
+          const worksheet = XLSX.utils.json_to_sheet(CategoryData.map(category => ({
+            ID: category.id,
+            Name: category.name
+          })));
+          
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, "Categories");
+          XLSX.writeFile(workbook, "question_categories.xlsx");
+          toast.success("Excel file downloaded successfully!");
+        } catch (error) {
+          toast.error("Error exporting Excel file!");
+        }
+      };
+      
+      const exportToPDF = () => {
+        try {
+          const doc = new jsPDF();
+          doc.text("Question Categories List", 20, 20);
+          
+          let yPos = 30;
+          CategoryData.forEach(category => {
+            doc.text(`ID: ${category.id}`, 20, yPos);
+            doc.text(`Name: ${category.name}`, 20, yPos + 10);
+            yPos += 20;
+            
+            if (yPos > 280) {
+              doc.addPage();
+              yPos = 20;
+            }
+          });
+          
+          doc.save("question_categories.pdf");
+          toast.success("PDF file downloaded successfully!");
+        } catch (error) {
+          toast.error("Error exporting PDF!");
+        }
+      };
+      
     // Columns for DataGrid
     const columns = [
         { field: "id", headerName: "ID", width: 100 },
@@ -160,7 +242,6 @@ const QuestionCategories = () => {
 
     return (
         <div>
-
             <ToastContainer />
             <h1 className="text-center mb-4">Question Category Management</h1>
 
@@ -176,6 +257,29 @@ const QuestionCategories = () => {
                 <button className="btn btn-primary ml-4" onClick={() => toggleModal(true)}>
                     Add Category
                 </button>
+                <Dropdown 
+      isOpen={exportDropdownOpen} 
+      toggle={toggleExportDropdown}
+      className="ml-4"
+    >
+      <DropdownToggle className="btn btn-success" style={{ height: "63px" }}>
+        Export
+      </DropdownToggle>
+      <DropdownMenu>
+        <DropdownItem onClick={exportToCSV}>
+          <FontAwesomeIcon icon={faFileCsv} className="mr-2" />
+          CSV
+        </DropdownItem>
+        <DropdownItem onClick={exportToExcel}>
+          <FontAwesomeIcon icon={faFileExcel} className="mr-2" />
+          Excel
+        </DropdownItem>
+        <DropdownItem onClick={exportToPDF}>
+          <FontAwesomeIcon icon={faFilePdf} className="mr-2" />
+          PDF
+        </DropdownItem>
+      </DropdownMenu>
+    </Dropdown>
             </div>
 
             {/* DataGrid */}
@@ -185,6 +289,11 @@ const QuestionCategories = () => {
                     columns={columns}
                     pageSize={10}
                     rowsPerPageOptions={[5, 10, 15]}
+                    // initialState={{
+                    //     sorting: {
+                    //       sortModel: [{ field: "id", sort: "asc" }], // Initial sorting by ID ascending
+                    //     },
+                    //   }}
                 />
             </div>
 
@@ -197,14 +306,15 @@ const QuestionCategories = () => {
                     <div className="modal-body">
                         <form>
                             <div className="form-group">
-                                <label>Name:</label>
+                                <label>Category: *</label> {/* Added asterisk */}
                                 <input
                                     type="text"
-                                    className="form-control"
+                                    className={`form-control ${errors.name ? "is-invalid" : ""}`}
                                     name="name"
                                     value={newCategory.name}
                                     onChange={handleInputChange}
                                 />
+                                {errors.name && <div className="invalid-feedback">{errors.name}</div>}
                             </div>
                         </form>
                     </div>
@@ -218,8 +328,8 @@ const QuestionCategories = () => {
                     </div>
                 </div>
             </Modal>
-
         </div>
     );
-}
+};
+
 export default QuestionCategories;

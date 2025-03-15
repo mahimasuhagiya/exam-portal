@@ -8,6 +8,16 @@ import showToastConfirmation from "./toast";
 import { Card, CardBody, CardTitle, CardText, Button } from "reactstrap";
 import "../css/styles.css";
 import ReactQuill from "react-quill";
+import Papa from "papaparse";
+import { jsPDF } from "jspdf";
+import * as XLSX from "xlsx";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { 
+    faFileCsv, 
+    faFileExcel, 
+    faFilePdf 
+} from "@fortawesome/free-solid-svg-icons";
+import { Dropdown, DropdownToggle, DropdownMenu, DropdownItem } from 'reactstrap';
 
 const Question = () => {
     const [questionData, setQuestionData] = useState([]);
@@ -38,6 +48,7 @@ const Question = () => {
         difficulty: { id: null, name: "" },
         category: { id: null, name: "" },
     });
+    const [errors, setErrors] = useState({}); // State for validation errors
     const token = getWithExpiry("jwtToken");
 
     const fetchOptions = async () => {
@@ -61,6 +72,115 @@ const Question = () => {
             toast.error("Error fetching difficulty or category options!");
         }
     };
+
+    const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+    const toggleExportDropdown = () => setExportDropdownOpen(prev => !prev);
+
+    const exportToCSV = () => {
+        try {
+            const formattedData = questionData.map((question) => ({
+                ID: question.id,
+                Question: question.question,
+                Category: question.category?.name || "N/A",
+                Difficulty: question.difficulty?.name || "N/A",
+                Type: question.programming ? "Programming" : "MCQ",
+                CorrectAnswer: question.correctAnswer,
+                OptionA: question.optionA || "N/A",
+                OptionB: question.optionB || "N/A",
+                OptionC: question.optionC || "N/A",
+                OptionD: question.optionD || "N/A",
+                HasImage: question.image ? "Yes" : "No",
+            }));
+
+            const csv = Papa.unparse(formattedData);
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "questions.csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success("CSV file downloaded successfully!");
+        } catch (error) {
+            toast.error("Error exporting CSV!");
+        }
+    };
+
+    const exportToExcel = () => {
+        try {
+            const worksheet = XLSX.utils.json_to_sheet(
+                questionData.map((question) => ({
+                    ID: question.id,
+                    Question: question.question,
+                    Category: question.category?.name || "N/A",
+                    Difficulty: question.difficulty?.name || "N/A",
+                    Type: question.programming ? "Programming" : "MCQ",
+                    "Correct Answer": question.correctAnswer,
+                    "Option A": question.optionA || "N/A",
+                    "Option B": question.optionB || "N/A",
+                    "Option C": question.optionC || "N/A",
+                    "Option D": question.optionD || "N/A",
+                    "Has Image": question.image ? "Yes" : "No",
+                    "Created At": new Date(question.createdAt).toLocaleString("en-GB")
+                }))
+            );
+    
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Questions");
+            XLSX.writeFile(workbook, "questions.xlsx");
+            toast.success("Excel file downloaded successfully!");
+        } catch (error) {
+            toast.error("Error exporting Excel file!");
+        }
+    };
+    
+    const exportToPDF = () => {
+        try {
+            const doc = new jsPDF();
+            let yPos = 20;
+            
+            questionData.forEach((question, index) => {
+                if (index !== 0 && yPos > 250) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+                
+                doc.setFontSize(12);
+                doc.text(`ID: ${question.id}`, 20, yPos);
+                doc.text(`Question: ${question.question}`, 20, yPos + 10);
+                doc.text(`Category: ${question.category?.name || "N/A"}`, 20, yPos + 20);
+                doc.text(`Difficulty: ${question.difficulty?.name || "N/A"}`, 20, yPos + 30);
+                doc.text(`Type: ${question.programming ? "Programming" : "MCQ"}`, 20, yPos + 40);
+                doc.text(`Correct Answer: ${question.correctAnswer}`, 20, yPos + 50);
+                
+                yPos += 60;
+                
+                if (question.image) {
+                    doc.text("Question Image: Available", 20, yPos);
+                    yPos += 10;
+                }
+                
+                if (!question.programming) {
+                    doc.text(`Options:`, 20, yPos);
+                    yPos += 10;
+                    doc.text(`A: ${question.optionA || "N/A"}`, 30, yPos);
+                    doc.text(`B: ${question.optionB || "N/A"}`, 80, yPos);
+                    doc.text(`C: ${question.optionC || "N/A"}`, 130, yPos);
+                    doc.text(`D: ${question.optionD || "N/A"}`, 180, yPos);
+                    yPos += 10;
+                }
+                
+                yPos += 20;
+            });
+    
+            doc.save("questions.pdf");
+            toast.success("PDF file downloaded successfully!");
+        } catch (error) {
+            toast.error("Error exporting PDF!");
+        }
+    };
+    
 
     // Fetch question data
     useEffect(() => {
@@ -109,49 +229,67 @@ const Question = () => {
             });
             setIsEditing(false);
             setQuestionType(0);
+            setErrors({}); // Reset validation errors
         }
     };
 
-    // Handle input change
-    const handleInputChange = (e) => {
-        if (e.target == undefined) {
-            setNewQuestion((prev) => ({ ...prev, correctAnswer: e }));
-        }
-        else {
-            const { name, value, type, checked, files } = e.target;
-            if (name === "category" || name === "difficulty") {
-                const options = name === "category" ? categoryOptions : difficultyOptions;
-                const selectedOption = options.find((option) => option.id == value);
-                if (selectedOption) {
-                    setNewQuestion((prev) => ({ ...prev, [name]: { id: value, name: selectedOption.name } }));
-                }
-            }
-            else if (type === "checkbox") {
-                setNewQuestion((prev) => ({ ...prev, [name]: checked }));
-            } else if (type === "file") {
-                setNewQuestion((prev) => ({ ...prev, [name]: files[0] }));
-            } else {
-                setNewQuestion((prev) => ({ ...prev, [name]: value }));
-            }
-        }
-    };
+   // Handle input change
+const handleInputChange = (e) => {
+    let fieldName; // Declare fieldName outside the block
 
+    if (e.target === undefined) {
+        // Handle ReactQuill case (correctAnswer)
+        setNewQuestion((prev) => ({ ...prev, correctAnswer: e }));
+        fieldName = "correctAnswer"; // Explicitly set fieldName for this case
+    } else {
+        // Destructure name as fieldName from e.target
+        const { name: fieldNameDestructured, value, type, checked, files } = e.target;
+        fieldName = fieldNameDestructured; // Assign to the outer variable
+
+        if (fieldName === "category" || fieldName === "difficulty") {
+            const options = fieldName === "category" ? categoryOptions : difficultyOptions;
+            const selectedOption = options.find((option) => option.id == value);
+            if (selectedOption) {
+                setNewQuestion((prev) => ({ ...prev, [fieldName]: { id: value, name: selectedOption.name } }));
+            }
+        } else if (type === "checkbox") {
+            setNewQuestion((prev) => ({ ...prev, [fieldName]: checked }));
+        } else if (type === "file") {
+            setNewQuestion((prev) => ({ ...prev, [fieldName]: files[0] }));
+        } else {
+            setNewQuestion((prev) => ({ ...prev, [fieldName]: value }));
+        }
+    }
+
+    // Clear the error for the field when it changes
+    setErrors((prev) => ({ ...prev, [fieldName]: "" }));
+};
     // Handle file change
     const handleFileChange = (e) => {
         const { name, files } = e.target;
         setNewQuestion((prev) => ({ ...prev, [name]: files[0] }));
     };
 
+    // Validate form fields
+    const validateForm = () => {
+        const newErrors = {};
+        if (!newQuestion.question) newErrors.question = "Question is required";
+        if (!newQuestion.difficulty.id) newErrors.difficulty = "Difficulty is required";
+        if (!newQuestion.category.id) newErrors.category = "Category is required";
+        if (!newQuestion.correctAnswer) newErrors.correctAnswer = "Correct answer is required";
+
+        if (isProgramming === 0) {
+            if (!newQuestion.optionA && !newQuestion.optionAImage) newErrors.optionA = "Option A is required";
+            if (!newQuestion.optionB && !newQuestion.optionBImage) newErrors.optionB = "Option B is required";
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
     // Save question (Add/Edit)
     const saveQuestion = async () => {
-        if (!newQuestion.question || !newQuestion.difficulty.id || !newQuestion.category.id || !newQuestion.correctAnswer) {
-            toast.warn("Please fill out all required fields.");
-            return;
-        }
-        if (isProgramming == 0 && !((newQuestion.optionA || newQuestion.optionAImage) && (newQuestion.optionB || newQuestion.optionBImage))) {
-            toast.warn("Please enter at least 2 options: A and B");
-            return;
-        }
+        if (!validateForm()) return; // Stop if validation fails
 
         const formData = new FormData();
         formData.append("question", JSON.stringify({
@@ -233,10 +371,10 @@ const Question = () => {
 
         showToastConfirmation("delete", "Question", deleteCallback);
     };
+
     const handleQuestionTypeChange = (e) => {
         setQuestionType(e.target.value);
     };
-
 
     // Open Edit Form
     const openEditForm = (question) => {
@@ -265,6 +403,7 @@ const Question = () => {
         });
         toggleModal(false);
     };
+
     // Filter data based on search
     const filteredData = questionData.filter((question) =>
         question.question?.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -274,7 +413,17 @@ const Question = () => {
         question.optionB?.toLowerCase().includes(searchText.toLowerCase()) ||
         question.optionC?.toLowerCase().includes(searchText.toLowerCase()) ||
         question.optionD?.toLowerCase().includes(searchText.toLowerCase())
-    ).sort((a, b) => b.id - a.id);
+    ).sort((a, b) => a.id - b.id);
+
+    // Get available options for correct answer
+    const getAvailableOptions = () => {
+        const options = [];
+        if (newQuestion.optionA || newQuestion.optionAImage) options.push("A");
+        if (newQuestion.optionB || newQuestion.optionBImage) options.push("B");
+        if (newQuestion.optionC || newQuestion.optionCImage) options.push("C");
+        if (newQuestion.optionD || newQuestion.optionDImage) options.push("D");
+        return options;
+    };
 
     return (
         <div>
@@ -291,9 +440,37 @@ const Question = () => {
                     style={{ height: "63px" }}
                     onChange={(e) => setSearchText(e.target.value)}
                 />
-                <button className="btn btn-primary mb-4" onClick={() => toggleModal(true)}>
-                    Add Question
-                </button>
+                
+                    <button 
+                        className="btn btn-primary ml-4" 
+                        onClick={() => toggleModal(true)}
+                    >
+                        Add Question
+                    </button>
+       
+        <Dropdown 
+            isOpen={exportDropdownOpen} 
+            toggle={toggleExportDropdown} 
+        >
+            <DropdownToggle className="btn btn-success ml-4" style={{ height: "63px" }}>
+                Export
+            </DropdownToggle>
+            <DropdownMenu>
+                <DropdownItem onClick={exportToCSV}>
+                    <FontAwesomeIcon icon={faFileCsv} className="mr-2" />
+                    CSV
+                </DropdownItem>
+                <DropdownItem onClick={exportToExcel}>
+                    <FontAwesomeIcon icon={faFileExcel} className="mr-2" />
+                    Excel
+                </DropdownItem>
+                <DropdownItem onClick={exportToPDF}>
+                    <FontAwesomeIcon icon={faFilePdf} className="mr-2" />
+                    PDF
+                </DropdownItem>
+            </DropdownMenu>
+        </Dropdown>
+               
             </div>
             <div style={{ padding: "20px" }}>
                 {filteredData.length == 0 ?
@@ -478,13 +655,14 @@ const Question = () => {
 
                         <form>
                             <div className="form-group">
-                                <label>Question:</label>
+                                <label>Question: *</label>
                                 <textarea
-                                    className="form-control"
+                                    className={`form-control ${errors.question ? "is-invalid" : ""}`}
                                     name="question"
                                     value={newQuestion.question}
                                     onChange={handleInputChange}
                                 />
+                                {errors.question && <div className="invalid-feedback">{errors.question}</div>}
                             </div>
                             <div className="form-group">
                                 <label>Question Image:</label>
@@ -506,13 +684,12 @@ const Question = () => {
                                     className="mt-2 img-thumbnail"
                                     width="150"
                                 />
-
                             </div>
 
                             <div className="form-group">
-                                <label>Difficulty:</label>
+                                <label>Difficulty: *</label>
                                 <select
-                                    className="form-control"
+                                    className={`form-control ${errors.difficulty ? "is-invalid" : ""}`}
                                     name="difficulty"
                                     value={newQuestion.difficulty.id}
                                     onChange={handleInputChange}
@@ -524,12 +701,13 @@ const Question = () => {
                                         </option>
                                     ))}
                                 </select>
+                                {errors.difficulty && <div className="invalid-feedback">{errors.difficulty}</div>}
                             </div>
 
                             <div className="form-group">
-                                <label>Category:</label>
+                                <label>Category: *</label>
                                 <select
-                                    className="form-control"
+                                    className={`form-control ${errors.category ? "is-invalid" : ""}`}
                                     name="category"
                                     value={newQuestion.category.id}
                                     onChange={handleInputChange}
@@ -541,7 +719,9 @@ const Question = () => {
                                         </option>
                                     ))}
                                 </select>
+                                {errors.category && <div className="invalid-feedback">{errors.category}</div>}
                             </div>
+
                             {isProgramming == 0 && (
                                 <>
                                     {["A", "B", "C", "D"].map((option) => (
@@ -577,23 +757,24 @@ const Question = () => {
                                                         className="mt-2 img-thumbnail"
                                                         width="150"
                                                     />
-
                                                 </>
                                             ) : (
                                                 <textarea
-                                                    className="form-control"
+                                                    className={`form-control ${errors[`option${option}`] ? "is-invalid" : ""}`}
                                                     name={`option${option}`}
                                                     value={newQuestion[`option${option}`]}
                                                     onChange={handleInputChange}
                                                 ></textarea>
                                             )}
+                                            {errors[`option${option}`] && <div className="invalid-feedback">{errors[`option${option}`]}</div>}
                                         </div>
                                     ))}
                                 </>
                             )}
+
                             {isProgramming == 1 && (
                                 <div className="form-group">
-                                    <label>Correct Answer:</label>
+                                    <label>Correct Answer: *</label>
                                     <ReactQuill
                                         name="correctAnswer"
                                         value={newQuestion.correctAnswer}
@@ -601,13 +782,15 @@ const Question = () => {
                                         theme="snow"
                                         placeholder="Write your code here..."
                                     />
+                                    {errors.correctAnswer && <div className="invalid-feedback">{errors.correctAnswer}</div>}
                                 </div>
                             )}
+
                             {isProgramming == 0 && (
                                 <div className="form-group">
-                                    <label>Correct Answer:</label>
+                                    <label>Correct Answer: *</label>
                                     <div>
-                                        {["A", "B", "C", "D"].map((option, index) => (
+                                        {getAvailableOptions().map((option) => (
                                             <label key={option}>
                                                 <input
                                                     type="radio"
@@ -620,9 +803,9 @@ const Question = () => {
                                             </label>
                                         ))}
                                     </div>
+                                    {errors.correctAnswer && <div className="invalid-feedback">{errors.correctAnswer}</div>}
                                 </div>
                             )}
-
                         </form>
                     </div>
                     <div className="modal-footer">

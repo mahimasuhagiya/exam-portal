@@ -5,8 +5,9 @@ import axios from 'axios';
 import API_URL, { getWithExpiry, setWithExpiry } from '../services/authService';
 import { toast, ToastContainer } from 'react-toastify';
 import showToastConfirmation from './toast';
-import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import Editor from "@monaco-editor/react";
+import { Box, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 
 const ExamPage = () => {
   const navigate = useNavigate();
@@ -17,8 +18,142 @@ const ExamPage = () => {
   const examId = getWithExpiry('examId');
   const token = getWithExpiry('jwtToken');
   const userId = getWithExpiry("userId");
-  useEffect(() => {
+  const [editorLanguage, setEditorLanguage] = useState("java");
+  const [code, setCode] = useState(`public class Main { public static void main(String[] args) { System.out.println("Hello, World!"); } }`);
+  const [output, setOutput] = useState("");
 
+  const executeCode = async (event) => {
+    event.preventDefault(); // Prevent form submission
+
+    try {
+      if (editorLanguage == 'python') {
+        const response = await fetch("https://emkc.org/api/v2/piston/execute", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            language: "python",  
+            version: "3.10",
+            files: [
+              { name: "main.py", content: code } 
+            ],
+          }),
+        });
+        // setOutput(response.data.run.output);
+        setOutput((await response.json()).run.output.toString());
+      }
+      else{
+        // const response = await fetch("http://localhost:8080/editor/code/execute",
+        //   {
+        //     method: "POST",
+        //     headers: {
+        //         "Content-Type": "application/json",
+        //     },
+        //     body: JSON.stringify({ 'language':editorLanguage, 'code':code }),
+        // });
+        // setOutput((await response.text()).toString());
+        const response = await fetch("http://localhost:5000/execute-code", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            code: code,  // The code to execute
+            language: editorLanguage,  // The programming language
+          }),
+        });
+  
+        const data = await response.json();  // Parse the response as JSON
+        console.log(data);  // Log for debugging
+        setOutput(data.output);
+      }
+    } catch (error) {
+      setOutput("Error executing code", error);
+    }
+  };
+
+
+  // Helper functions moved to the top
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handlePreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    }
+  };
+
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    }
+  };
+
+  const handleQuestionClick = (index) => {
+    setCurrentQuestionIndex(index);
+  };
+
+  const isQuestionAttempted = (questionId) => {
+    return answers.hasOwnProperty(questionId);
+  };
+
+  const handleLanguageChange = (event) => {
+    setEditorLanguage(event.target.value);
+  };
+
+  const handleProgrammingAnswerChange = (value) => {
+    setAnswers({
+      ...answers,
+      [questions[currentQuestionIndex].id]: value,
+    });
+  };
+
+  const runCode = () => {
+    const code = answers[questions[currentQuestionIndex].id] || '';
+    let logs = [];
+
+    try {
+      // Save original console functions
+      const originalConsoleLog = console.log;
+      const originalConsoleError = console.error;
+
+      // Override console methods to capture output
+      console.log = (...args) => {
+        logs.push(args.join(' '));
+        originalConsoleLog(...args);
+      };
+
+      console.error = (...args) => {
+        logs.push(`ERROR: ${args.join(' ')}`);
+        originalConsoleError(...args);
+      };
+
+      // Execute the code
+      const func = new Function(code);
+      const result = func();
+
+      // Restore original console functions
+      console.log = originalConsoleLog;
+      console.error = originalConsoleError;
+
+      // Combine logs and result
+      let outputContent = logs.join('\n');
+      if (result !== undefined) {
+        outputContent += `\n>> Final result: ${JSON.stringify(result)}`;
+      }
+
+      setOutput(outputContent || "Code executed successfully (no output)");
+
+    } catch (error) {
+      setOutput(`Execution Error: ${error.message}`);
+    }
+  };
+
+  useEffect(() => {
     // Prevent text selection during the exam
     document.body.style.userSelect = 'none';
 
@@ -43,7 +178,6 @@ const ExamPage = () => {
 
   // Start timer from stored time on reload
   useEffect(() => {
-
     if (timeLeft <= 0) {
       saveCallback(); // Automatically submit when timer runs out
       return;
@@ -57,33 +191,23 @@ const ExamPage = () => {
       });
     }, 1000);
 
-    return () => clearInterval(timerId); // Cleanup timer on component unmount
+    return () => clearInterval(timerId);// Cleanup timer on component unmount
   }, [timeLeft]);
 
-  // Save answers in localStorage
   useEffect(() => {
-    localStorage.setItem('answers', JSON.stringify(answers)); // Store answers
+    localStorage.setItem('answers', JSON.stringify(answers));// Store answers
   }, [answers]);
 
   const handleAnswerChange = (questionId, option) => {
-    const optionValue = option;
-
     setAnswers({
       ...answers,
-      [questionId]: optionValue,
-    });
-  };
-
-  const handleRichTextChange = (questionId, value) => {
-    setAnswers({
-      ...answers,
-      [questionId]: value,
+      [questionId]: option,
     });
   };
 
   const saveCallback = async () => {
     try {
-      const response = await axios.post(
+      await axios.post(
         `${API_URL}/questions_attempt/${examId}/${userId}`,
         answers,
         {
@@ -96,7 +220,6 @@ const ExamPage = () => {
 
       setWithExpiry('examId', 0);
       setWithExpiry('examDuration', 0);
-
       // Navigate after successful submission
       navigate('/examsubmit');
     } catch (error) {
@@ -105,61 +228,31 @@ const ExamPage = () => {
     }
   };
 
-
   const handleSubmit = async () => {
     showToastConfirmation("submit", "exam", saveCallback);
   };
 
   const SubmitExam = async () => {
-   toast.warn("you changed tabs or windows submitting the exam...");
-   localStorage.setItem("doneSuspiciousActivity",true);
-   setTimeout(() => {
-    saveCallback(); // Automatically submit 
-  }, 1000)
+    toast.warn("You changed tabs or windows - submitting the exam...");
+    localStorage.setItem("doneSuspiciousActivity", true);
+    setTimeout(() => saveCallback(), 1000)
   };
 
-  const handleNextQuestion = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    }
-  };
+  // // Handle tab/window switching
+  // useEffect(() => {
+  //   const handleVisibilityChange = () => {
+  //     if (document.hidden) {
+  //       SubmitExam();
+  //     }
+  //   };
 
-  const handlePreviousQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-    }
-  };
 
-  const handleQuestionClick = (index) => {
-    setCurrentQuestionIndex(index);
-  };
+  //   document.addEventListener('visibilitychange', handleVisibilityChange);
+  //   return () => {
+  //     document.removeEventListener('visibilitychange', handleVisibilityChange);
+  //   };
+  // }, []);
 
-  const isQuestionAttempted = (questionId) => {
-    return answers.hasOwnProperty(questionId);
-  };
-
-  const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Handle tab/window switching
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // If the user switches to a different tab or window
-        // Trigger some action, like auto-submitting the exam
-        // Or alerting the user that they are leaving the exam
-        SubmitExam();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
 
   return (
     <Container>
@@ -217,13 +310,32 @@ const ExamPage = () => {
                   {/* Conditional rendering based on programming question */}
                   {questions[currentQuestionIndex].programming ? (
                     <FormGroup>
-                      <Label for="richTextAnswer">Answer:</Label>
-                      <ReactQuill
-                        value={answers[questions[currentQuestionIndex].id] || ''}
-                        onChange={(value) => handleRichTextChange(questions[currentQuestionIndex].id, value)}
-                        theme="snow"
-                        placeholder="Write your code here..."
-                      />
+                      <div>
+                        <FormControl sx={{ marginTop: '20px', minWidth: 120, height: '40px' }}>
+                          <InputLabel id="language-select-label">Language</InputLabel>
+                          <Select
+                            value={editorLanguage}
+                            onChange={handleLanguageChange}
+                            label="Language"
+                          >
+                            <MenuItem value="c">C</MenuItem>
+                            <MenuItem value="python">Python</MenuItem>
+                            <MenuItem value="java">Java</MenuItem>
+                            <MenuItem value="csharp">C#</MenuItem>
+                            <MenuItem value="cpp">C++</MenuItem>
+                            <MenuItem value="sql">SQL</MenuItem>
+                          </Select>
+                        </FormControl>
+                        <Editor
+                          height="300px"
+                          defaultLanguage="java"
+                          // defaultValue={code}
+                          onChange={(value) => setCode(value)}
+                          theme="vs-dark"
+                        />
+                        <Button onClick={executeCode} type="button">Run</Button>
+                        <pre>{output}</pre>
+                      </div>
                     </FormGroup>
                   ) : (
                     <Row>

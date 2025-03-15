@@ -6,6 +6,9 @@
     "@emotion/react": "^11.13.5",
     "@emotion/styled": "^11.13.5",
     "@fortawesome/fontawesome-free": "^6.7.2",
+    "@fortawesome/free-solid-svg-icons": "^6.7.2",
+    "@fortawesome/react-fontawesome": "^0.2.2",
+    "@monaco-editor/react": "^4.7.0",
     "@mui/material": "^6.1.10",
     "@mui/x-data-grid": "^7.23.1",
     "@react-login-page/page7": "^1.0.4",
@@ -15,7 +18,11 @@
     "axios": "^1.7.9",
     "bootstrap": "^5.3.3",
     "cors": "^2.8.5",
+    "express": "^4.21.2",
     "framer-motion": "^11.13.1",
+    "jspdf": "^3.0.0",
+    "node-fetch": "^3.3.2",
+    "papaparse": "^5.5.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^5.4.0",
@@ -25,7 +32,8 @@
     "react-toastify": "^10.0.6",
     "reactstrap": "^9.2.3",
     "styled-components": "^6.1.13",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
   },
   "scripts": {
     "start": "react-scripts start",

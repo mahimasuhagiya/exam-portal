@@ -13,5 +13,5 @@ public interface ExamQuestionRepository extends JpaRepository<ExamQuestion, Long
 	List<ExamQuestion> findQestionByExam_Id(Long examId);
 	ExamQuestion findByExam_IdAndQuestion_Id(Long examId,Long questionId);
 	List<ExamQuestion> findByQuestion_Id(Long questionId);
-	int countQuestionByExam(Exam exam);
+	int countQuestionByExam_Id(Long examId);
 }

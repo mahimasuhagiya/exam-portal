@@ -6,7 +6,12 @@ import { DataGrid } from "@mui/x-data-grid";
 import { Modal } from "reactstrap";
 import showToastConfirmation from "./toast";
 import "../css/styles.css";
-
+import Papa from "papaparse";
+import { Dropdown, DropdownToggle, DropdownMenu, DropdownItem } from 'reactstrap';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faFileCsv, faFileExcel, faFilePdf } from "@fortawesome/free-solid-svg-icons";
+import { jsPDF } from "jspdf";
+import * as XLSX from "xlsx";
 
 const Exams = () => {
     const [examsData, setExamsData] = useState([]);
@@ -29,6 +34,7 @@ const Exams = () => {
         programming: false,
         active: true,
     });
+    const [errors, setErrors] = useState({}); // State for validation errors
     const token = getWithExpiry("jwtToken");
 
     // Fetch exams data
@@ -60,6 +66,7 @@ const Exams = () => {
             toast.error("Error fetching difficulties data!");
         }
     };
+
     const fetchQuestions = async (flag) => {
         try {
             const response = await axios.get(`${API_URL}/questions/programming/${flag}`, {
@@ -73,6 +80,7 @@ const Exams = () => {
             toast.error("Error fetching questions data!");
         }
     };
+
     const fetchExamQuestions = async (examId) => {
         try {
             const response = await axios.get(`${API_URL}/exam_questions/exam/${examId}`, {
@@ -88,7 +96,6 @@ const Exams = () => {
     };
 
     useEffect(() => {
-
         fetchExams();
         fetchDifficulties();
     }, [token]);
@@ -107,11 +114,13 @@ const Exams = () => {
                 active: true,
             });
             setIsEditing(false);
+            setErrors({}); // Reset validation errors
         }
     };
+
     const toggleQuestionModal = (flag, exam) => {
         setIsQuestionModalOpen(!isQuestionModalOpen);
-        if (flag == true) {
+        if (flag === true) {
             setSelectedExam(exam);
             setProgramming(exam.programming);
             fetchExamQuestions(exam.id);
@@ -129,18 +138,28 @@ const Exams = () => {
         } else {
             setNewExam((prev) => ({ ...prev, [name]: value }));
         }
+        // Clear the error for the field when it changes
+        setErrors((prev) => ({ ...prev, [name]: "" }));
+    };
+
+    // Validate form fields    
+    const validateForm = () => {
+        const newErrors = {};
+        if (!newExam.title) newErrors.title = "Title is required";
+        if (!newExam.difficulty.id) newErrors.difficulty = "Difficulty is required";
+        if (!newExam.durationMinutes) newErrors.durationMinutes = "Duration is required";
+        if (!newExam.numberOfQuestions) newErrors.numberOfQuestions = "Number of questions is required";
+        if (!newExam.passingMarks) newErrors.passingMarks = "Passing marks is required";
+        if ((newExam.passingMarks > newExam.numberOfQuestions || newExam.passingMarks < 0) && !newExam.programming) {
+            newErrors.passingMarks = "Passing marks should be greater than 0 and less than or equal to the number of questions.";
+        }
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
     // Save exam (Add/Edit)
     const saveExam = async () => {
-        if (!newExam.title || !newExam.difficulty.id || !newExam.durationMinutes || !newExam.numberOfQuestions || !newExam.passingMarks) {
-            toast.warn("Please fill out all required fields.");
-            return;
-        }
-        if (newExam.programming == false && newExam.passingMarks > newExam.numberOfQuestions || newExam.passingMarks < 0) {
-            toast.warn("Passing marks should greter than 0 and equal to / less than number of questions.");
-            return;
-        }
+        if (!validateForm()) return; // Stop if validation fails
 
         const saveCallback = async () => {
             try {
@@ -190,15 +209,15 @@ const Exams = () => {
 
         const saveCallback = async () => {
             try {
-                    const response = await axios.post(`${API_URL}/exams/CreateWithQuestions`, newExam, {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            "Content-Type": "application/json",
-                        },
-                    });
-                    setExamsData([...examsData, response.data]);
-                    toast.success("Exam added successfully!");
-                
+                const response = await axios.post(`${API_URL}/exams/CreateWithQuestions`, newExam, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                });
+                setExamsData([...examsData, response.data]);
+                toast.success("Exam added successfully!");
+
 
                 toggleModal();
             } catch (error) {
@@ -210,6 +229,7 @@ const Exams = () => {
         showToastConfirmation("add", "Exam with random questions", saveCallback);
     };
 
+    // Toggle exam status
     const toggleExamStatus = (id) => {
         const exam = examsData.find((e) => e.id === id);
         const action = exam.active ? "deactivate" : "activate";
@@ -241,36 +261,47 @@ const Exams = () => {
             toggleCallback
         );
     };
+
+    // Manage exam questions
     const manageExamQuestion = async (e, id) => {
         const { checked } = e.target;
-        if (e.target.checked) {
-            if (examQuestionData.length == selectedExam.numberOfQuestions) {
-                toast.error("Exam is of " + selectedExam.numberOfQuestions + " questions only which are alredy selected.");
+
+        if (checked) {
+            if (examQuestionData.length === selectedExam.numberOfQuestions) {
+                toast.error(`Exam is limited to ${selectedExam.numberOfQuestions} questions.`);
                 return;
             }
-            // Add the id to examQuestionData
+
+            // Add question to selection optimistically
             setExamQuestionData((prev) => [...prev, id]);
         } else {
-            // Remove the id from examQuestionData
+            // Remove question from selection optimistically
             setExamQuestionData((prev) => prev.filter((questionId) => questionId !== id));
         }
+
         try {
             if (checked) {
-                await axios.post(`${API_URL}/exam_questions`, {
-                    exam: { id: selectedExam.id },
-                    question: { id }
-                }, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                await axios.post(
+                    `${API_URL}/exam_questions`,
+                    { exam: { id: selectedExam.id }, question: { id } },
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
             } else {
                 await axios.delete(`${API_URL}/exam_questions`, {
                     data: { exam: { id: selectedExam.id }, question: { id } },
-                    headers: { Authorization: `Bearer ${token}` }
+                    headers: { Authorization: `Bearer ${token}` },
                 });
             }
         } catch (error) {
             const errorMessage = error.response?.data?.message || error.message || "An unexpected error occurred.";
             toast.error(errorMessage);
+
+            // Revert selection on error
+            if (checked) {
+                setExamQuestionData((prev) => prev.filter((questionId) => questionId !== id)); // Remove from selection
+            } else {
+                setExamQuestionData((prev) => [...prev, id]); // Add back to selection
+            }
         }
     };
 
@@ -291,7 +322,7 @@ const Exams = () => {
             }
         };
 
-        showToastConfirmation("delete", "Exam.", deleteCallback, "All results of this exam will geet deleted.");
+        showToastConfirmation("delete", "Exam", deleteCallback, "All results of this exam will be deleted.");
     };
 
     // Open Edit Form
@@ -317,6 +348,81 @@ const Exams = () => {
         exam.difficulty?.name.toLowerCase().includes(searchText.toLowerCase())
     ).sort((a, b) => b.id - a.id) : [];
 
+    const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+    const toggleExportDropdown = () => setExportDropdownOpen(prev => !prev);
+
+    const exportToCSV = () => {
+        try {
+            // Convert objects to readable strings
+            const formattedData = examsData.map((row) => ({
+                ...row,
+                difficulty: typeof row.difficulty === "object" && row.difficulty.name ? row.difficulty.name : row.difficulty
+            }));
+
+            const csv = Papa.unparse(formattedData); // Convert JSON to CSV format
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "ExamData.csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success("CSV file downloaded successfully!");
+        } catch (error) {
+            toast.error("Error exporting CSV!");
+        }
+    };
+
+    const exportToExcel = () => {
+        try {
+            const worksheet = XLSX.utils.json_to_sheet(examsData.map(exam => ({
+                ID: exam.id,
+                Title: exam.title,
+                Difficulty: exam.difficulty?.name || "N/A",
+                Duration: exam.durationMinutes,
+                Questions: exam.numberOfQuestions,
+                "Passing Marks": exam.passingMarks,
+                Type: exam.programming ? "Programming" : "MCQ",
+                Status: exam.active ? "Active" : "Inactive"
+            })));
+
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Exams");
+            XLSX.writeFile(workbook, "exams.xlsx");
+            toast.success("Excel file downloaded successfully!");
+        } catch (error) {
+            toast.error("Error exporting Excel file!");
+        }
+    };
+
+    const exportToPDF = () => {
+        try {
+            const doc = new jsPDF();
+            doc.text("Exams List", 20, 20);
+            let yPos = 30;
+            examsData.forEach(exam => {
+                doc.text(`ID: ${exam.id}`, 20, yPos);
+                doc.text(`Title: ${exam.title}`, 20, yPos + 10);
+                doc.text(`Difficulty: ${exam.difficulty?.name || "N/A"}`, 20, yPos + 20);
+                doc.text(`Duration: ${exam.durationMinutes} mins`, 20, yPos + 30);
+                doc.text(`Questions: ${exam.numberOfQuestions}`, 20, yPos + 40);
+                doc.text(`Passing Marks: ${exam.passingMarks}`, 20, yPos + 50);
+                doc.text(`Type: ${exam.programming ? "Programming" : "MCQ"}`, 20, yPos + 60);
+                doc.text(`Status: ${exam.active ? "Active" : "Inactive"}`, 20, yPos + 70);
+                yPos += 80;
+                if (yPos > 280) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+            });
+            doc.save("exams.pdf");
+            toast.success("PDF file downloaded successfully!");
+        } catch (error) {
+            toast.error("Error exporting PDF!");
+        }
+    };
+
     // Columns for DataGrid
     const columns = [
         { field: "id", headerName: "ID", width: 100 },
@@ -334,10 +440,9 @@ const Exams = () => {
             field: "programming",
             headerName: "Type",
             flex: 1,
-            renderCell: (params) => (<div>
-                {params.row.programming ? "Programming" : "MCQ"}
-            </div>
-            )
+            renderCell: (params) => (
+                <div>{params.row.programming ? "Programming" : "MCQ"}</div>
+            ),
         },
         {
             field: "isActive",
@@ -350,7 +455,7 @@ const Exams = () => {
                 >
                     {params.row.active ? "Deactivate" : "Activate"}
                 </button>
-            )
+            ),
         },
         {
             field: "actions",
@@ -358,23 +463,35 @@ const Exams = () => {
             flex: 2,
             renderCell: (params) => (
                 <div>
-                    <button className="btn btn-sm mr-2" style={{ backgroundColor: "#ecaa44" }} onClick={() => toggleQuestionModal(true, params.row)}>
+                    <button
+                        className="btn btn-sm mr-2"
+                        style={{ backgroundColor: "#ecaa44" }}
+                        onClick={() => toggleQuestionModal(true, params.row)}
+                    >
                         Add/Remove Question
-                    </button>&nbsp;
-                    <button className="btn btn-primary btn-sm mr-2" onClick={() => openEditForm(params.row)}>
+                    </button>
+                    <button
+                        className="btn btn-primary btn-sm mr-2"
+                        onClick={() => openEditForm(params.row)}
+                    >
                         Edit
-                    </button>&nbsp;
-                    <button className="btn btn-danger btn-sm" onClick={() => deleteExam(params.row.id)}>
+                    </button>
+                    <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => deleteExam(params.row.id)}
+                    >
                         Delete
                     </button>
                 </div>
             ),
         },
     ];
+
+    // Filtered question data
     const filteredQuestionData = questionData
         .map((question) => ({
             ...question,
-            select: examQuestionData.includes(question.id) ? 1 : 0, // Add "select" property
+            select: examQuestionData.includes(question.id) ? 1 : 0,
         }))
         .filter((question) =>
             question.question?.toLowerCase().includes(searchQuestionText.toLowerCase()) ||
@@ -386,14 +503,11 @@ const Exams = () => {
             question.optionD?.toLowerCase().includes(searchQuestionText.toLowerCase())
         )
         .sort((a, b) => {
-            // Sort by "select" (checked first), then by "id" (ascending)
-            if (b.select !== a.select) {
-                return b.select - a.select; // Checked first
-            }
-            return a.id - b.id; // Then by ID
+            if (b.select !== a.select) return b.select - a.select;
+            return a.id - b.id;
         });
 
-    // Columns for DataGrid
+    // Columns for Question DataGrid
     const QuestionColumns = [
         {
             field: "select",
@@ -415,12 +529,11 @@ const Exams = () => {
             flex: 1,
             renderCell: (params) => (
                 params.value ? <img src={`${API_URL}/${params.value}`} alt="Question" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : "N/A"
-            )
+            ),
         },
-
-
     ];
-    if (programming == false) {
+
+    if (!programming) {
         QuestionColumns.push(
             {
                 field: "optionA",
@@ -428,7 +541,7 @@ const Exams = () => {
                 flex: 1,
                 renderCell: (params) => (
                     params.row.aimage ? <img src={`${API_URL}/${params.value}`} alt="Option A" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"
-                )
+                ),
             },
             {
                 field: "optionB",
@@ -436,7 +549,7 @@ const Exams = () => {
                 flex: 1,
                 renderCell: (params) => (
                     params.row.bimage ? <img src={`${API_URL}/${params.value}`} alt="Option B" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"
-                )
+                ),
             },
             {
                 field: "optionC",
@@ -444,7 +557,7 @@ const Exams = () => {
                 flex: 1,
                 renderCell: (params) => (
                     params.row.cimage ? <img src={`${API_URL}/${params.value}`} alt="Option C" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"
-                )
+                ),
             },
             {
                 field: "optionD",
@@ -452,33 +565,35 @@ const Exams = () => {
                 flex: 1,
                 renderCell: (params) => (
                     params.row.dimage ? <img src={`${API_URL}/${params.value}`} alt="Option D" style={{ maxWidth: "50px", maxHeight: "50px" }} /> : params.value || "N/A"
-                )
-            },
-        )
+                ),
+            }
+        );
     }
     QuestionColumns.push(
         {
             field: "correctAnswer",
             headerName: "Correct Answer",
             flex: 1,
-            renderCell: (params) => <div
-                style={{ overflow: "hidden", textOverflow: "ellipsis", }}
-                dangerouslySetInnerHTML={{ __html: params.value }}
-            />
+            renderCell: (params) => (
+                <div
+                    style={{ overflow: "hidden", textOverflow: "ellipsis" }}
+                    dangerouslySetInnerHTML={{ __html: params.value }}
+                />
+            ),
         },
         {
             field: "difficulty",
             headerName: "Difficulty",
             flex: 1,
-            renderCell: (params) => params.value?.name || "N/A"
+            renderCell: (params) => params.value?.name || "N/A",
         },
         {
             field: "category",
             headerName: "Category",
             flex: 1,
-            renderCell: (params) => params.value?.name || "N/A"
+            renderCell: (params) => params.value?.name || "N/A",
         },
-    )
+    );
 
     return (
         <div>
@@ -489,7 +604,7 @@ const Exams = () => {
             <div className="d-flex justify-content-between mb-4">
                 <input
                     type="text"
-                    placeholder="Search Exams"
+                    placeholder="Search Exams By Title Or Difficulty Level"
                     className="form-control"
                     value={searchText}
                     onChange={(e) => setSearchText(e.target.value)}
@@ -497,8 +612,30 @@ const Exams = () => {
                 <button className="btn btn-primary ml-4" onClick={() => toggleModal(true)}>
                     Add Exam
                 </button>
+                <Dropdown
+                    isOpen={exportDropdownOpen}
+                    toggle={toggleExportDropdown}
+                    className="ml-4"
+                >
+                    <DropdownToggle className="btn btn-success" style={{ height: "63px" }}>
+                        Export
+                    </DropdownToggle>
+                    <DropdownMenu>
+                        <DropdownItem onClick={exportToCSV}>
+                            <FontAwesomeIcon icon={faFileCsv} className="mr-2" />
+                            CSV
+                        </DropdownItem>
+                        <DropdownItem onClick={exportToExcel}>
+                            <FontAwesomeIcon icon={faFileExcel} className="mr-2" />
+                            Excel
+                        </DropdownItem>
+                        <DropdownItem onClick={exportToPDF}>
+                            <FontAwesomeIcon icon={faFilePdf} className="mr-2" />
+                            PDF
+                        </DropdownItem>
+                    </DropdownMenu>
+                </Dropdown>
             </div>
-
             {/* DataGrid */}
             <div style={{ width: "100%" }}>
                 <DataGrid
@@ -506,6 +643,11 @@ const Exams = () => {
                     columns={columns}
                     pageSize={10}
                     rowsPerPageOptions={[5, 10, 15]}
+                    // initialState={{
+                    //     sorting: {
+                    //         sortModel: [{ field: "id", sort: "asc" }], // Initial sorting by ID ascending
+                    //     },
+                    // }}
                 />
             </div>
 
@@ -516,20 +658,21 @@ const Exams = () => {
                     <div className="modal-body">
                         <form>
                             <div className="form-group">
-                                <label>Title:</label>
+                                <label>Title: *</label>
                                 <input
                                     type="text"
-                                    className="form-control"
+                                    className={`form-control ${errors.title ? "is-invalid" : ""}`}
                                     name="title"
                                     value={newExam.title}
                                     onChange={handleInputChange}
                                 />
+                                {errors.title && <div className="invalid-feedback">{errors.title}</div>}
                             </div>
 
                             <div className="form-group">
-                                <label>Difficulty:</label>
+                                <label>Difficulty: *</label>
                                 <select
-                                    className="form-control"
+                                    className={`form-control ${errors.difficulty ? "is-invalid" : ""}`}
                                     name="difficulty"
                                     value={newExam.difficulty.id}
                                     onChange={handleInputChange}
@@ -541,29 +684,32 @@ const Exams = () => {
                                         </option>
                                     ))}
                                 </select>
+                                {errors.difficulty && <div className="invalid-feedback">{errors.difficulty}</div>}
                             </div>
                             <div className="form-group">
-                                <label>Duration (minutes):</label>
+                                <label>Duration (minutes): *</label>
                                 <input
                                     type="number"
-                                    className="form-control"
+                                    className={`form-control ${errors.durationMinutes ? "is-invalid" : ""}`}
                                     name="durationMinutes"
                                     value={newExam.durationMinutes}
                                     onChange={handleInputChange}
                                 />
+                                {errors.durationMinutes && <div className="invalid-feedback">{errors.durationMinutes}</div>}
                             </div>
                             <div className="form-group">
-                                <label>Number of questions:</label>
+                                <label>Number of questions: *</label>
                                 <input
                                     type="number"
-                                    className="form-control"
+                                    className={`form-control ${errors.numberOfQuestions ? "is-invalid" : ""}`}
                                     name="numberOfQuestions"
                                     value={newExam.numberOfQuestions}
                                     onChange={handleInputChange}
                                 />
+                                {errors.numberOfQuestions && <div className="invalid-feedback">{errors.numberOfQuestions}</div>}
                             </div>
                             <div className="form-group">
-                                <label>Is programming exam ?:</label>
+                                <label>Is programming exam?</label>
                                 <input
                                     type="checkbox"
                                     name="programming"
@@ -573,14 +719,15 @@ const Exams = () => {
                                 />
                             </div>
                             <div className="form-group">
-                                <label>Passing Marks:</label>
+                                <label>Passing Marks: *</label>
                                 <input
                                     type="number"
-                                    className="form-control"
+                                    className={`form-control ${errors.passingMarks ? "is-invalid" : ""}`}
                                     name="passingMarks"
                                     value={newExam.passingMarks}
                                     onChange={handleInputChange}
                                 />
+                                {errors.passingMarks && <div className="invalid-feedback">{errors.passingMarks}</div>}
                             </div>
                         </form>
                     </div>
@@ -591,15 +738,16 @@ const Exams = () => {
                         <button className="btn btn-primary" onClick={saveExam}>
                             {isEditing ? "Edit" : "Add"}
                         </button>
-                        {!isEditing ? 
-                        <button className="btn btn-primary" onClick={saveExamWithQuestion}>
-                            Add with random questions
-                        </button>:<></>
-}
+                        {!isEditing ?
+                            <button className="btn btn-primary" onClick={saveExamWithQuestion}>
+                                Add with random questions
+                            </button> : <></>
+                        }
                     </div>
                 </div>
             </Modal>
 
+            {/* Question Modal */}
             <Modal isOpen={isQuestionModalOpen} toggle={toggleQuestionModal} className="modal-lg">
                 <div className="modal-content">
                     <div className="modal-header">Add/Remove Question</div>
@@ -607,7 +755,7 @@ const Exams = () => {
                         <div className="d-flex justify-content-between mb-4">
                             <input
                                 type="text"
-                                placeholder="Search Exams"
+                                placeholder="Search Questions"
                                 className="form-control"
                                 value={searchQuestionText}
                                 onChange={(e) => setQuestionSearchText(e.target.value)}

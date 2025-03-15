@@ -123,7 +123,7 @@ public class ExamService {
 			throw new RuntimeException("Exam not found with id " + id);
 		}
 		if (!exam.isActive()) {
-			int numberOfQuestions = examQuestionRepository.countQuestionByExam(exam);
+			int numberOfQuestions = examQuestionRepository.countQuestionByExam_Id(exam.getId());
 			if (numberOfQuestions == exam.getNumberOfQuestions()) {
 				exam.setActive(true);
 			} else {

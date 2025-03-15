@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -14,8 +15,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.exam.model.User;
+import com.exam.repository.UserRepository;
+import com.exam.service.ExcelService;
 import com.exam.service.UserService;
 
 @RestController
@@ -25,6 +31,12 @@ public class UserController {
 
     private final UserService userService;
 
+    @Autowired
+    private ExcelService excelService;
+
+    @Autowired
+    private UserRepository userRepository;
+    
     public UserController(UserService userService) {
         this.userService = userService;
     }
@@ -41,6 +53,20 @@ public class UserController {
     	    }
     }
 
+    @PostMapping("/upload")
+    public String uploadUsers(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return "Please upload a valid Excel file.";
+        }
+
+        try {
+            List<User> users = excelService.parseExcelFile(file);
+            userRepository.saveAll(users);
+            return "Successfully uploaded " + users.size() + " users.";
+        } catch (Exception e) {
+            return "Error: " + e.getMessage();
+        }
+    }
 
   // @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_EXAMINER')")
     @GetMapping()
