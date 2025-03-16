@@ -35,6 +35,9 @@ const Exams = () => {
         active: true,
     });
     const [errors, setErrors] = useState({}); // State for validation errors
+    const [filterModalOpen, setFilterModalOpen] = useState(false);
+    const [appliedFilters, setAppliedFilters] = useState({});
+    const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
     const token = getWithExpiry("jwtToken");
 
     // Fetch exams data
@@ -342,15 +345,23 @@ const Exams = () => {
         toggleModal();
     };
 
-    // Filtered exams based on search text
-    const filteredData = Array.isArray(examsData) ? examsData.filter((exam) =>
-        exam.title.toLowerCase().includes(searchText.toLowerCase()) ||
-        exam.difficulty?.name.toLowerCase().includes(searchText.toLowerCase())
-    ).sort((a, b) => b.id - a.id) : [];
 
-    const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
-    const toggleExportDropdown = () => setExportDropdownOpen(prev => !prev);
+    // Apply filters
+    const applyFilters = (filters) => {
+        setAppliedFilters(filters);
+    };
 
+    // Filtered exams based on search text and applied filters
+    const filteredData = Array.isArray(examsData) ? examsData.filter((exam) => {
+        const matchesSearch = exam.title.toLowerCase().includes(searchText.toLowerCase()) ||
+            exam.difficulty?.name.toLowerCase().includes(searchText.toLowerCase());
+        const matchesDifficulty = !appliedFilters.difficulty || exam.difficulty?.name === appliedFilters.difficulty;
+        const matchesType = !appliedFilters.type || (appliedFilters.type === "MCQ" ? !exam.programming : exam.programming);
+        const matchesStatus = !appliedFilters.status || (appliedFilters.status === "Active" ? exam.active : !exam.active);
+        return matchesSearch && matchesDifficulty && matchesType && matchesStatus;
+    }).sort((a, b) => b.id - a.id) : [];
+
+    // Export to CSV
     const exportToCSV = () => {
         try {
             // Convert objects to readable strings
@@ -595,12 +606,111 @@ const Exams = () => {
         },
     );
 
+    // Filter Modal Component
+    const FilterModal = ({ isOpen, toggle, applyFilters }) => {
+        const [filters, setFilters] = useState({
+            difficulty: "",
+            type: "",
+            status: "",
+        });
+
+        // Handle input change
+        const handleInputChange = (e) => {
+            const { name, value } = e.target;
+            setFilters((prev) => ({ ...prev, [name]: value }));
+        };
+
+        // Apply filters and close the modal
+        const handleApplyFilters = () => {
+            applyFilters(filters);
+            toggle();
+        };
+
+        // Reset all filters
+        const handleResetFilters = () => {
+            setFilters({
+                difficulty: "",
+                type: "",
+                status: "",
+            });
+            applyFilters({}); // Apply empty filters to reset
+        };
+
+        return (
+            <Modal isOpen={isOpen} toggle={toggle}>
+                <div className="modal-content">
+                    <div className="modal-header">Filter Exams</div>
+                    <div className="modal-body">
+                        <form>
+                            {/* Difficulty Level Filter */}
+                            <div className="form-group">
+                                <label>Difficulty Level:</label>
+                                <select
+                                    className="form-control"
+                                    name="difficulty"
+                                    value={filters.difficulty}
+                                    onChange={handleInputChange}
+                                >
+                                    <option value="">All</option>
+                                    <option value="Easy">Easy</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Hard">Hard</option>
+                                </select>
+                            </div>
+                            {/* Type of Exam Filter */}
+                            <div className="form-group">
+                                <label>Type of Exam:</label>
+                                <select
+                                    className="form-control"
+                                    name="type"
+                                    value={filters.type}
+                                    onChange={handleInputChange}
+                                >
+                                    <option value="">All</option>
+                                    <option value="MCQ">MCQ</option>
+                                    <option value="Programming">Programming</option>
+                                </select>
+                            </div>
+                            {/* Status Filter */}
+                            <div className="form-group">
+                                <label>Status:</label>
+                                <select
+                                    className="form-control"
+                                    name="status"
+                                    value={filters.status}
+                                    onChange={handleInputChange}
+                                >
+                                    <option value="">All</option>
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                    <div className="modal-footer">
+                        {/* Reset Button */}
+                        <button className="btn btn-secondary" onClick={handleResetFilters}>
+                            Reset
+                        </button>
+                        {/* Cancel Button */}
+                        <button className="btn btn-secondary" onClick={toggle}>
+                            Cancel
+                        </button>
+                        {/* Apply Filters Button */}
+                        <button className="btn btn-primary" onClick={handleApplyFilters}>
+                            Apply Filters
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+        );
+    };
+
     return (
         <div>
             <ToastContainer />
             <h1 className="text-center mb-4">Manage Exams</h1>
-
-            {/* Search Input */}
+            {/* Search Input and Buttons */}
             <div className="d-flex justify-content-between mb-4">
                 <input
                     type="text"
@@ -612,9 +722,12 @@ const Exams = () => {
                 <button className="btn btn-primary ml-4" onClick={() => toggleModal(true)}>
                     Add Exam
                 </button>
+                <button className="btn btn-info ml-4" onClick={() => setFilterModalOpen(true)}>
+                    Apply Filters
+                </button>
                 <Dropdown
                     isOpen={exportDropdownOpen}
-                    toggle={toggleExportDropdown}
+                    toggle={() => setExportDropdownOpen(!exportDropdownOpen)}
                     className="ml-4"
                 >
                     <DropdownToggle className="btn btn-success" style={{ height: "63px" }}>
@@ -643,11 +756,11 @@ const Exams = () => {
                     columns={columns}
                     pageSize={10}
                     rowsPerPageOptions={[5, 10, 15]}
-                    // initialState={{
-                    //     sorting: {
-                    //         sortModel: [{ field: "id", sort: "asc" }], // Initial sorting by ID ascending
-                    //     },
-                    // }}
+                // initialState={{
+                //     sorting: {
+                //         sortModel: [{ field: "id", sort: "asc" }], // Initial sorting by ID ascending
+                //     },
+                // }}
                 />
             </div>
 
@@ -746,7 +859,12 @@ const Exams = () => {
                     </div>
                 </div>
             </Modal>
-
+            {/* Filter Modal */}
+            <FilterModal
+                isOpen={filterModalOpen}
+                toggle={() => setFilterModalOpen(!filterModalOpen)}
+                applyFilters={applyFilters}
+            />
             {/* Question Modal */}
             <Modal isOpen={isQuestionModalOpen} toggle={toggleQuestionModal} className="modal-lg">
                 <div className="modal-content">

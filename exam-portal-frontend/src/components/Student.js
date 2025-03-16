@@ -31,7 +31,11 @@ const Student = () => {
         isActive: true,
     });
     const [errors, setErrors] = useState({});
+    const [filterModalOpen, setFilterModalOpen] = useState(false);
+    const [appliedFilters, setAppliedFilters] = useState({});
     const token = getWithExpiry("jwtToken");
+    const [file, setFile] = useState(null);
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
     // Fetch students data
     const fetchStudents = async () => {
@@ -88,11 +92,27 @@ const Student = () => {
         }
     };
 
+    // Toggle upload modal
+    const toggleUploadModal = () => {
+        setIsUploadModalOpen(!isUploadModalOpen);
+    };
+
     // Handle input change
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         if (name === "college") {
-            setNewStudent((prev) => ({ ...prev, college: { id: value, name: collegesData.filter((clg) => clg.id === value)[0].name } }));
+            const selectedCollege = collegesData.find((clg) => clg.id === parseInt(value)); // Ensure value is parsed as a number
+            if (selectedCollege) {
+                setNewStudent((prev) => ({
+                    ...prev,
+                    college: { id: parseInt(value), name: selectedCollege.name }, // Ensure id is a number
+                }));
+            } else {
+                setNewStudent((prev) => ({
+                    ...prev,
+                    college: { id: "", name: "" },
+                }));
+            }
         } else {
             setNewStudent((prev) => ({ ...prev, [name]: value }));
         }
@@ -227,14 +247,22 @@ const Student = () => {
         toggleModal(); // Open the modal
     };
 
-    // Filter data based on search
-    const filteredData = studentsData.filter((student) =>
-        student.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-        student.college?.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-        student.email?.toLowerCase().includes(searchText.toLowerCase()) ||
-        student.phone?.toString().includes(searchText) ||
-        student.address?.toLowerCase().includes(searchText.toLowerCase())
-    ).sort((a, b) => b.id - a.id);
+    // Apply filters
+    const applyFilters = (filters) => {
+        setAppliedFilters(filters);
+    };
+
+    // Filter data based on search and applied filters
+    const filteredData = studentsData.filter((student) => {
+        const matchesSearch = student.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+            student.college?.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+            student.email?.toLowerCase().includes(searchText.toLowerCase()) ||
+            student.phone?.toString().includes(searchText) ||
+            student.address?.toLowerCase().includes(searchText.toLowerCase());
+        const matchesStatus = !appliedFilters.status || student.active === (appliedFilters.status === "Active");
+        const matchesCollege = !appliedFilters.college || student.college?.id === parseInt(appliedFilters.college);
+        return matchesSearch && matchesStatus && matchesCollege;
+    }).sort((a, b) => b.id - a.id);
 
     const exportToCSV = () => {
         try {
@@ -381,29 +409,107 @@ const Student = () => {
         },
     ];
 
-    const [file, setFile] = useState(null);
-
     const handleFileChange = (e) => {
-      setFile(e.target.files[0]);
+        setFile(e.target.files[0]);
     };
-  
+
     const handleUpload = async () => {
-      if (!file) {
-        alert("Please select a file first.");
-        return;
-      }
-      const formData = new FormData();
-      formData.append("file", file);
-  
-      try {
-        const response =  await axios.post(`${API_URL}/users/upload`, formData, {
-          headers: { "Content-Type": "multipart/form-data" },
+        if (!file) {
+            alert("Please select a file first.");
+            return;
+        }
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const response = await axios.post(`${API_URL}/users/upload`, formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            alert(response.data);
+        } catch (error) {
+            console.error("Upload error:", error);
+            alert("Failed to upload file");
+        }
+    };
+
+    // Filter Modal Component
+    const FilterModal = ({ isOpen, toggle, applyFilters }) => {
+        const [filters, setFilters] = useState({
+            status: "",
+            college: "",
         });
-        alert(response.data);
-      } catch (error) {
-        console.error("Upload error:", error);
-        alert("Failed to upload file");
-      }
+
+        // Handle input change
+        const handleInputChange = (e) => {
+            const { name, value } = e.target;
+            setFilters((prev) => ({ ...prev, [name]: value }));
+        };
+
+        // Apply filters and close the modal
+        const handleApplyFilters = () => {
+            applyFilters(filters);
+            toggle();
+        };
+
+        // Reset filters
+        const handleResetFilters = () => {
+            setFilters({ status: "", college: "" });
+            applyFilters({});
+        };
+
+        return (
+            <Modal isOpen={isOpen} toggle={toggle}>
+                <div className="modal-content">
+                    <div className="modal-header">Filter Students</div>
+                    <div className="modal-body">
+                        <form>
+                            {/* Status Filter */}
+                            <div className="form-group">
+                                <label>Status:</label>
+                                <select
+                                    className="form-control"
+                                    name="status"
+                                    value={filters.status}
+                                    onChange={handleInputChange}
+                                >
+                                    <option value="">All</option>
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                </select>
+                            </div>
+                            {/* College Filter */}
+                            <div className="form-group">
+                                <label>College:</label>
+                                <select
+                                    className="form-control"
+                                    name="college"
+                                    value={filters.college}
+                                    onChange={handleInputChange}
+                                >
+                                    <option value="">All</option>
+                                    {collegesData.map((college) => (
+                                        <option key={college.id} value={college.id}>
+                                            {college.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                    <div className="modal-footer">
+                        <button className="btn btn-secondary" onClick={handleResetFilters}>
+                            Reset
+                        </button>
+                        <button className="btn btn-secondary" onClick={toggle}>
+                            Cancel
+                        </button>
+                        <button className="btn btn-primary" onClick={handleApplyFilters}>
+                            Apply Filters
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+        );
     };
 
     return (
@@ -423,13 +529,19 @@ const Student = () => {
                 <button className="btn btn-primary ml-4" onClick={() => toggleModal(true)}>
                     Add Student
                 </button>
-                <div>
-                    <input type="file" accept=".xlsx" onChange={handleFileChange} />
-                    <button onClick={handleUpload}>Upload</button>
-                </div>
+                <button className="btn btn-outline-primary ml-4" onClick={toggleUploadModal}
+                    style={{
+                        backgroundColor: 'teal',
+                        color: 'white'
+                    }}>
+                    Upload File
+                </button>
+                <button className="btn btn-info ml-4" onClick={() => setFilterModalOpen(true)}>
+                    Apply Filters
+                </button>
                 <Dropdown
                     isOpen={exportDropdownOpen}
-                    toggle={toggleExportDropdown}
+                    toggle={() => setExportDropdownOpen(!exportDropdownOpen)}
                     className="ml-4"
                 >
                     <DropdownToggle className="btn btn-success" style={{ height: "63px" }}>
@@ -458,15 +570,10 @@ const Student = () => {
                     columns={columns}
                     pageSize={10}
                     rowsPerPageOptions={[5, 10, 15]}
-                    // initialState={{
-                    //     sorting: {
-                    //         sortModel: [{ field: "id", sort: "asc" }], // Initial sorting by ID ascending
-                    //     },
-                    // }}
                 />
             </div>
 
-            {/* Modal */}
+            {/* Add/Edit Student Modal */}
             <Modal isOpen={isModalOpen} toggle={toggleModal}>
                 <div className="modal-content">
                     <div className="modal-header">
@@ -556,6 +663,44 @@ const Student = () => {
                         </button>
                         <button className="btn btn-primary" onClick={saveStudent}>
                             {isEditing ? "Edit" : "Add"}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+            {/* Filter Modal */}
+            <FilterModal
+                isOpen={filterModalOpen}
+                toggle={() => setFilterModalOpen(!filterModalOpen)}
+                applyFilters={applyFilters}
+            />
+            {/* Upload File Modal */}
+            <Modal isOpen={isUploadModalOpen} toggle={toggleUploadModal}>
+                <div className="modal-content">
+                    <div className="modal-header">
+                        Upload File
+                    </div>
+                    <div className="modal-body">
+                        <div className="form-group">
+                            <label>Choose File:</label>
+                            <input
+                                type="file"
+                                accept=".xlsx"
+                                onChange={handleFileChange}
+                                className="form-control"
+                            />
+                        </div>
+                        <div className="form-group">
+                            <a href="/sample-file.xlsx" download>
+                                Download Sample File
+                            </a>
+                        </div>
+                    </div>
+                    <div className="modal-footer">
+                        <button className="btn btn-secondary" onClick={toggleUploadModal}>
+                            Cancel
+                        </button>
+                        <button className="btn btn-primary" onClick={handleUpload}>
+                            Upload
                         </button>
                     </div>
                 </div>

@@ -44,16 +44,7 @@ const ExamPage = () => {
         setOutput((await response.json()).run.output.toString());
       }
       else{
-        // const response = await fetch("http://localhost:8080/editor/code/execute",
-        //   {
-        //     method: "POST",
-        //     headers: {
-        //         "Content-Type": "application/json",
-        //     },
-        //     body: JSON.stringify({ 'language':editorLanguage, 'code':code }),
-        // });
-        // setOutput((await response.text()).toString());
-        const response = await fetch("http://localhost:5000/execute-code", {
+          const response = await fetch("http://localhost:5000/execute-code", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -105,54 +96,6 @@ const ExamPage = () => {
     setEditorLanguage(event.target.value);
   };
 
-  const handleProgrammingAnswerChange = (value) => {
-    setAnswers({
-      ...answers,
-      [questions[currentQuestionIndex].id]: value,
-    });
-  };
-
-  const runCode = () => {
-    const code = answers[questions[currentQuestionIndex].id] || '';
-    let logs = [];
-
-    try {
-      // Save original console functions
-      const originalConsoleLog = console.log;
-      const originalConsoleError = console.error;
-
-      // Override console methods to capture output
-      console.log = (...args) => {
-        logs.push(args.join(' '));
-        originalConsoleLog(...args);
-      };
-
-      console.error = (...args) => {
-        logs.push(`ERROR: ${args.join(' ')}`);
-        originalConsoleError(...args);
-      };
-
-      // Execute the code
-      const func = new Function(code);
-      const result = func();
-
-      // Restore original console functions
-      console.log = originalConsoleLog;
-      console.error = originalConsoleError;
-
-      // Combine logs and result
-      let outputContent = logs.join('\n');
-      if (result !== undefined) {
-        outputContent += `\n>> Final result: ${JSON.stringify(result)}`;
-      }
-
-      setOutput(outputContent || "Code executed successfully (no output)");
-
-    } catch (error) {
-      setOutput(`Execution Error: ${error.message}`);
-    }
-  };
-
   useEffect(() => {
     // Prevent text selection during the exam
     document.body.style.userSelect = 'none';
@@ -198,13 +141,20 @@ const ExamPage = () => {
     localStorage.setItem('answers', JSON.stringify(answers));// Store answers
   }, [answers]);
 
+  
   const handleAnswerChange = (questionId, option) => {
     setAnswers({
       ...answers,
       [questionId]: option,
     });
   };
-
+  const handleCodeChange = (questionId, value) => {
+    setCode(value);
+    setAnswers({
+      ...answers,
+      [questionId]: value,
+    });
+  };
   const saveCallback = async () => {
     try {
       await axios.post(
@@ -220,6 +170,7 @@ const ExamPage = () => {
 
       setWithExpiry('examId', 0);
       setWithExpiry('examDuration', 0);
+      localStorage.removeItem('answers');
       // Navigate after successful submission
       navigate('/examsubmit');
     } catch (error) {
@@ -238,20 +189,20 @@ const ExamPage = () => {
     setTimeout(() => saveCallback(), 1000)
   };
 
-  // // Handle tab/window switching
-  // useEffect(() => {
-  //   const handleVisibilityChange = () => {
-  //     if (document.hidden) {
-  //       SubmitExam();
-  //     }
-  //   };
+  // Handle tab/window switching
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        SubmitExam();
+      }
+    };
 
 
-  //   document.addEventListener('visibilitychange', handleVisibilityChange);
-  //   return () => {
-  //     document.removeEventListener('visibilitychange', handleVisibilityChange);
-  //   };
-  // }, []);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
 
   return (
@@ -330,7 +281,9 @@ const ExamPage = () => {
                           height="300px"
                           defaultLanguage="java"
                           // defaultValue={code}
-                          onChange={(value) => setCode(value)}
+                          defaultValue= {answers[questions[currentQuestionIndex].id] || ''}
+                          onChange={(value) => handleCodeChange(questions[currentQuestionIndex].id, value)}
+                        //  onChange={(value) => setCode(value)}
                           theme="vs-dark"
                         />
                         <Button onClick={executeCode} type="button">Run</Button>

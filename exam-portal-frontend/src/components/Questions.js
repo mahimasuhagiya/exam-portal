@@ -28,6 +28,9 @@ const Question = () => {
     const [selectedQuestion, setSelectedQuestion] = useState(null);
     const [searchText, setSearchText] = useState("");
     const getRowHeight = () => "auto";
+    const applyFilters = (filters) => {
+        setAppliedFilters(filters);
+    };
     const [isProgramming, setQuestionType] = useState(0);
     const [newQuestion, setNewQuestion] = useState({
         question: "",
@@ -49,6 +52,8 @@ const Question = () => {
         category: { id: null, name: "" },
     });
     const [errors, setErrors] = useState({}); // State for validation errors
+    const [filterModalOpen, setFilterModalOpen] = useState(false); // State for filter modal
+    const [appliedFilters, setAppliedFilters] = useState({}); // State for applied filters
     const token = getWithExpiry("jwtToken");
 
     const fetchOptions = async () => {
@@ -264,6 +269,7 @@ const handleInputChange = (e) => {
     // Clear the error for the field when it changes
     setErrors((prev) => ({ ...prev, [fieldName]: "" }));
 };
+
     // Handle file change
     const handleFileChange = (e) => {
         const { name, files } = e.target;
@@ -404,16 +410,22 @@ const handleInputChange = (e) => {
         toggleModal(false);
     };
 
-    // Filter data based on search
-    const filteredData = questionData.filter((question) =>
-        question.question?.toLowerCase().includes(searchText.toLowerCase()) ||
-        question.difficulty?.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-        question.category?.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-        question.optionA?.toLowerCase().includes(searchText.toLowerCase()) ||
-        question.optionB?.toLowerCase().includes(searchText.toLowerCase()) ||
-        question.optionC?.toLowerCase().includes(searchText.toLowerCase()) ||
-        question.optionD?.toLowerCase().includes(searchText.toLowerCase())
-    ).sort((a, b) => a.id - b.id);
+    // Filter data based on search and applied filters
+    const filteredData = questionData.filter((question) => {
+        const matchesSearch = question.question?.toLowerCase().includes(searchText.toLowerCase()) ||
+            question.difficulty?.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+            question.category?.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+            question.optionA?.toLowerCase().includes(searchText.toLowerCase()) ||
+            question.optionB?.toLowerCase().includes(searchText.toLowerCase()) ||
+            question.optionC?.toLowerCase().includes(searchText.toLowerCase()) ||
+            question.optionD?.toLowerCase().includes(searchText.toLowerCase());
+
+        const matchesDifficulty = !appliedFilters.difficulty || question.difficulty?.id === parseInt(appliedFilters.difficulty);
+        const matchesCategory = !appliedFilters.category || question.category?.id === parseInt(appliedFilters.category);
+        const matchesType = !appliedFilters.type || (appliedFilters.type === "MCQ" ? !question.programming : question.programming);
+
+        return matchesSearch && matchesDifficulty && matchesCategory && matchesType;
+    }).sort((a, b) => b.id - a.id);
 
     // Get available options for correct answer
     const getAvailableOptions = () => {
@@ -425,12 +437,112 @@ const handleInputChange = (e) => {
         return options;
     };
 
+    // Filter Modal Component
+    const FilterModal = ({ isOpen, toggle, applyFilters }) => {
+        const [filters, setFilters] = useState({
+            difficulty: "",
+            category: "",
+            type: "",
+        });
+
+        // Handle input change
+        const handleInputChange = (e) => {
+            const { name, value } = e.target;
+            setFilters((prev) => ({ ...prev, [name]: value }));
+        };
+
+        // Apply filters and close the modal
+        const handleApplyFilters = () => {
+            applyFilters(filters);
+            toggle();
+        };
+
+        // Reset filters
+        const handleResetFilters = () => {
+            setFilters({ difficulty: "", category: "", type: "" });
+            applyFilters({});
+        };
+
+        return (
+            <Modal isOpen={isOpen} toggle={toggle}>
+                <div className="modal-content">
+                    <div className="modal-header">Filter Questions</div>
+                    <div className="modal-body">
+                        <form>
+                            {/* Difficulty Filter */}
+                            <div className="form-group">
+                                <label>Difficulty:</label>
+                                <select
+                                    className="form-control"
+                                    name="difficulty"
+                                    value={filters.difficulty}
+                                    onChange={handleInputChange}
+                                >
+                                    <option value="">All</option>
+                                    {difficultyOptions.map((difficulty) => (
+                                        <option key={difficulty.id} value={difficulty.id}>
+                                            {difficulty.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Category Filter */}
+                            <div className="form-group">
+                                <label>Category:</label>
+                                <select
+                                    className="form-control"
+                                    name="category"
+                                    value={filters.category}
+                                    onChange={handleInputChange}
+                                >
+                                    <option value="">All</option>
+                                    {categoryOptions.map((category) => (
+                                        <option key={category.id} value={category.id}>
+                                            {category.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Type Filter */}
+                            <div className="form-group">
+                                <label>Type:</label>
+                                <select
+                                    className="form-control"
+                                    name="type"
+                                    value={filters.type}
+                                    onChange={handleInputChange}
+                                >
+                                    <option value="">All</option>
+                                    <option value="MCQ">MCQ</option>
+                                    <option value="Programming">Programming</option>
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                    <div className="modal-footer">
+                        <button className="btn btn-secondary" onClick={handleResetFilters}>
+                            Reset
+                        </button>
+                        <button className="btn btn-secondary" onClick={toggle}>
+                            Cancel
+                        </button>
+                        <button className="btn btn-primary" onClick={handleApplyFilters}>
+                            Apply Filters
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+        );
+    };
+
     return (
         <div>
             <ToastContainer />
             <h1 className="text-center mb-4">Question Management</h1>
 
-            {/* Search Input */}
+            {/* Search Input and Buttons */}
             <div className="d-flex justify-content-between mb-4">
                 <input
                     type="text"
@@ -441,37 +553,45 @@ const handleInputChange = (e) => {
                     onChange={(e) => setSearchText(e.target.value)}
                 />
                 
-                    <button 
-                        className="btn btn-primary ml-4" 
-                        onClick={() => toggleModal(true)}
-                    >
-                        Add Question
-                    </button>
-       
-        <Dropdown 
-            isOpen={exportDropdownOpen} 
-            toggle={toggleExportDropdown} 
-        >
-            <DropdownToggle className="btn btn-success ml-4" style={{ height: "63px" }}>
-                Export
-            </DropdownToggle>
-            <DropdownMenu>
-                <DropdownItem onClick={exportToCSV}>
-                    <FontAwesomeIcon icon={faFileCsv} className="mr-2" />
-                    CSV
-                </DropdownItem>
-                <DropdownItem onClick={exportToExcel}>
-                    <FontAwesomeIcon icon={faFileExcel} className="mr-2" />
-                    Excel
-                </DropdownItem>
-                <DropdownItem onClick={exportToPDF}>
-                    <FontAwesomeIcon icon={faFilePdf} className="mr-2" />
-                    PDF
-                </DropdownItem>
-            </DropdownMenu>
-        </Dropdown>
-               
+                <button 
+                    className="btn btn-primary ml-4" 
+                    onClick={() => toggleModal(true)}
+                >
+                    Add Question
+                </button>
+
+                <button 
+                    className="btn btn-info ml-4" 
+                    onClick={() => setFilterModalOpen(true)}
+                >
+                    Apply Filters
+                </button>
+
+                <Dropdown 
+                    isOpen={exportDropdownOpen} 
+                    toggle={toggleExportDropdown} 
+                >
+                    <DropdownToggle className="btn btn-success ml-4" style={{ height: "63px" }}>
+                        Export
+                    </DropdownToggle>
+                    <DropdownMenu>
+                        <DropdownItem onClick={exportToCSV}>
+                            <FontAwesomeIcon icon={faFileCsv} className="mr-2" />
+                            CSV
+                        </DropdownItem>
+                        <DropdownItem onClick={exportToExcel}>
+                            <FontAwesomeIcon icon={faFileExcel} className="mr-2" />
+                            Excel
+                        </DropdownItem>
+                        <DropdownItem onClick={exportToPDF}>
+                            <FontAwesomeIcon icon={faFilePdf} className="mr-2" />
+                            PDF
+                        </DropdownItem>
+                    </DropdownMenu>
+                </Dropdown>
             </div>
+
+            {/* DataGrid */}
             <div style={{ padding: "20px" }}>
                 {filteredData.length == 0 ?
                     <Card style={{
@@ -619,7 +739,7 @@ const handleInputChange = (e) => {
                 }
             </div>
 
-            {/* Modal */}
+            {/* Add/Edit Question Modal */}
             <Modal isOpen={isModalOpen} className="modal-lg" toggle={() => toggleModal(true)}>
                 <div className="modal-content">
                     <div className="modal-header">
@@ -818,6 +938,13 @@ const handleInputChange = (e) => {
                     </div>
                 </div>
             </Modal>
+
+            {/* Filter Modal */}
+            <FilterModal
+                isOpen={filterModalOpen}
+                toggle={() => setFilterModalOpen(!filterModalOpen)}
+                applyFilters={applyFilters}
+            />
         </div>
     );
 };

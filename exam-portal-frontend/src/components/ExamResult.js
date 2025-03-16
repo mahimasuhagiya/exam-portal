@@ -51,6 +51,7 @@ const ExamResult = () => {
           const userAnswerEntry = userAnswers.find(
             ([, questionId]) => questionId == question.id
           );
+          debugger;
           return {
             ...question,
             user_answer: userAnswerEntry ? userAnswerEntry[0] : "Not answered",
