@@ -415,7 +415,7 @@ const Student = () => {
 
     const handleUpload = async () => {
         if (!file) {
-            alert("Please select a file first.");
+            toast.error("Please select a file first.");
             return;
         }
         const formData = new FormData();
@@ -425,10 +425,10 @@ const Student = () => {
             const response = await axios.post(`${API_URL}/users/upload`, formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
-            alert(response.data);
+            toast(response.data);
+            fetchStudents();
         } catch (error) {
-            console.error("Upload error:", error);
-            alert("Failed to upload file");
+            toast.error("Failed to upload file",error);
         }
     };
 
